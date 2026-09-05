@@ -9,6 +9,9 @@ services:
     healthCheckPath: /health
     plan: free
     autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
 
   # Spring Boot Backend REST API
   - type: web
