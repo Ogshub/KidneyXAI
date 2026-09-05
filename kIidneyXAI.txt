@@ -1,0 +1,2459 @@
+# Final Project Specification
+
+## Project Title
+
+**An Explainable Machine Learning-Based Decision Support Framework for Personalized Kidney Disease Risk Assessment and Lifestyle Monitoring**
+
+Working name: **KidneyCare-XAI**
+
+---
+
+# 1. What are we building?
+
+We are building a **full-stack web-based intelligent decision-support system** for kidney-health risk awareness.
+
+The system combines:
+
+**Machine Learning**
+→ estimates kidney disease risk from clinically relevant data.
+
+**Explainable AI / SHAP**
+→ explains which input features contributed to the model's prediction.
+
+**Lifestyle Monitoring**
+→ allows users to record water intake, exercise, sleep, diet-related habits, weight, etc.
+
+**Rule-Based Recommendation Engine**
+→ generates transparent, personalized health-awareness recommendations from the user's reported information.
+
+**Longitudinal Tracking**
+→ stores assessments and lifestyle entries so users can see trends over time.
+
+**College Research Study**
+→ anonymized students/faculty data will be collected, with institutional permission, to study lifestyle patterns and evaluate the usefulness/usability of the system.
+
+The system is explicitly **not a diagnostic tool**.
+
+---
+
+# 2. The central idea
+
+The project has three distinct intelligence layers:
+
+```text
+             USER
+               │
+               ▼
+       Clinical Assessment
+               │
+               ▼
+        Machine Learning
+               │
+               ▼
+        Risk Assessment
+               │
+               ▼
+              SHAP
+               │
+               ▼
+        Why this result?
+               │
+               ▼
+     Decision Support Layer
+               ▲
+               │
+       Lifestyle Tracker
+               │
+               ▼
+      Recommendation Engine
+               │
+               ▼
+        Personalized Guidance
+               │
+               ▼
+          Dashboard
+               │
+               ▼
+       History & Progress
+```
+
+The most important principle is:
+
+> **ML predicts. SHAP explains. Rules recommend. Tracking monitors.**
+
+We should preserve this separation throughout the implementation and paper.
+
+---
+
+# 3. Why are we building this?
+
+A conventional ML kidney-disease project generally does:
+
+```text
+Patient data
+     ↓
+ML model
+     ↓
+CKD prediction
+```
+
+The problem is that a prediction such as:
+
+> Risk = 74%
+
+doesn't tell the user:
+
+* Why did the model produce this result?
+* Which features mattered?
+* What lifestyle factors should they pay attention to?
+* What has changed since their previous assessment?
+* Are recommendations based on the model or on their lifestyle information?
+
+Our system addresses these questions separately.
+
+Therefore the research isn't simply:
+
+> "Can machine learning predict CKD?"
+
+Instead, our research investigates:
+
+> **How can an explainable ML model be integrated with transparent personalized recommendations and longitudinal lifestyle monitoring to create a practical kidney-health decision-support framework?**
+
+---
+
+# 4. What is unique?
+
+We should be careful with the word **novelty**.
+
+We are **not** claiming that nobody has used:
+
+* Random Forest
+* XGBoost
+* SHAP
+* CKD datasets
+
+for kidney disease.
+
+Those things have already been studied.
+
+Our contribution is the **integrated framework and its evaluation**.
+
+The proposed system combines:
+
+```text
+Clinical ML
+      +
+SHAP Explainability
+      +
+Transparent Recommendation Engine
+      +
+Lifestyle Monitoring
+      +
+Longitudinal Tracking
+      +
+Real-World User Evaluation
+```
+
+The research will evaluate both:
+
+**technical performance**
+
+and
+
+**human usefulness/understanding**.
+
+That is a much stronger research story.
+
+---
+
+# 5. Our two datasets
+
+We will deliberately use two different datasets.
+
+## Dataset A — Clinical ML dataset
+
+Purpose:
+
+> Train and evaluate the kidney-disease prediction model.
+
+We will select a publicly available, documented CKD dataset containing:
+
+```text
+Clinical features
+        +
+Known CKD outcome
+```
+
+The UCI Chronic Kidney Disease dataset is our initial candidate. It contains 400 instances, 24 predictor variables and a CKD classification target.
+
+However, we will inspect available datasets before finalizing the paper's dataset choice.
+
+We will NOT choose a dataset simply because it is popular.
+
+We will consider:
+
+* number of records
+* feature quality
+* missing values
+* target quality
+* documentation
+* class balance
+* relevance to the research question
+* reproducibility
+* licensing/access
+
+---
+
+# 6. Dataset B — College research dataset
+
+With your college's permission, we will collect anonymized data from:
+
+**Students + Faculty**
+
+Purpose:
+
+1. Study lifestyle patterns.
+2. Study kidney-health awareness.
+3. Test the recommendation framework.
+4. Evaluate explanation understandability.
+5. Evaluate recommendation usefulness.
+6. Evaluate dashboard usability.
+
+We will **not** pretend that this is a clinically labeled CKD dataset.
+
+That distinction is extremely important.
+
+---
+
+# 7. College questionnaire
+
+Keep the questionnaire short enough that people actually complete it.
+
+### Section A — Demographics
+
+```text
+Participant ID
+Role:
+    Student
+    Faculty
+
+Age Group
+
+Gender — optional
+```
+
+Participant IDs:
+
+```text
+P001
+P002
+P003
+```
+
+Avoid unnecessary collection of:
+
+* name
+* roll number
+* phone
+* email
+
+unless the approved study specifically requires them.
+
+---
+
+# 8. Health information
+
+Ask:
+
+```text
+Diabetes
+    Yes / No / Prefer not to say
+
+Hypertension
+    Yes / No / Prefer not to say
+
+Family history of kidney disease
+    Yes / No / Don't know / Prefer not to say
+
+Painkiller usage
+    Never
+    Occasionally
+    Frequently
+    Prefer not to say
+```
+
+We should not request detailed medical records unless specifically approved.
+
+---
+
+# 9. Lifestyle questionnaire
+
+### Water
+
+```text
+<1 L/day
+1–1.5 L
+1.5–2 L
+2–2.5 L
+>2.5 L
+```
+
+### Exercise
+
+```text
+None
+<60 min/week
+60–150 min
+150–300 min
+>300 min
+```
+
+### Sleep
+
+```text
+<5 hours
+5–6
+6–7
+7–8
+>8
+```
+
+### Salty/processed foods
+
+```text
+Never
+Rarely
+1–2 times/week
+3–5 times/week
+Daily
+```
+
+### Fast food
+
+Same frequency scale.
+
+### Sugary drinks
+
+```text
+Never
+1–2/week
+3–5/week
+Daily
+Multiple/day
+```
+
+### Smoking
+
+```text
+Never
+Former
+Occasional
+Regular
+Prefer not to say
+```
+
+### Alcohol
+
+```text
+Never
+Occasionally
+Monthly
+Weekly
+Prefer not to say
+```
+
+---
+
+# 10. Kidney-health awareness
+
+Include a few awareness questions.
+
+For example:
+
+> Are you aware that kidney disease may have few obvious symptoms in its early stages?
+
+> Do you know that diabetes and hypertension are important risk factors for kidney disease?
+
+> Do you regularly monitor your blood pressure?
+
+> Have you previously received information about kidney health?
+
+This lets us analyze:
+
+**Lifestyle behavior + kidney-health awareness.**
+
+---
+
+# 11. Application user flow
+
+A normal user goes through:
+
+```text
+Landing Page
+      ↓
+Register
+      ↓
+Login
+      ↓
+Complete Profile
+      ↓
+Dashboard
+      ↓
+Health Profile
+      ↓
+Risk Assessment
+      ↓
+ML Prediction
+      ↓
+SHAP Explanation
+      ↓
+Recommendations
+      ↓
+Daily Tracking
+      ↓
+Dashboard
+      ↓
+History & Trends
+      ↓
+Future Reassessment
+```
+
+---
+
+# 12. Application modules
+
+We will build these modules.
+
+### Module 1 — Authentication
+
+* Registration
+* Login
+* Logout
+* JWT authentication
+* Password hashing
+* Protected routes
+
+---
+
+### Module 2 — User Profile
+
+Information such as:
+
+* name
+* email
+* age
+* gender
+* height
+* weight
+
+BMI is calculated automatically.
+
+---
+
+### Module 3 — Health Profile
+
+Store:
+
+* diabetes
+* hypertension
+* family history
+* smoking
+* alcohol
+* painkiller usage
+
+---
+
+### Module 4 — Risk Assessment
+
+User enters the clinical features supported by the final ML dataset.
+
+The system:
+
+```text
+Validate
+ ↓
+Prepare data
+ ↓
+ML service
+ ↓
+Risk output
+```
+
+---
+
+### Module 5 — Explainability
+
+Display:
+
+* risk result
+* major contributing features
+* SHAP values
+* global feature importance
+* local explanation
+
+---
+
+### Module 6 — Recommendation Engine
+
+Generate transparent recommendations based on predefined rules.
+
+---
+
+### Module 7 — Daily Tracker
+
+Track:
+
+* water
+* exercise
+* sleep
+* salt/processed food
+* fast food
+* sugary drinks
+* smoking
+* alcohol
+* weight
+* stress
+
+---
+
+### Module 8 — Dashboard
+
+Show:
+
+* latest model risk score
+* latest assessment
+* lifestyle progress score
+* today's activity
+* recent recommendations
+* charts
+* history
+
+---
+
+### Module 9 — History & Trends
+
+Show:
+
+* previous assessments
+* risk-score history
+* lifestyle trends
+* weight trend
+* exercise trend
+* water trend
+* sleep trend
+
+---
+
+# 13. Risk assessment
+
+We will start with a **binary ML task**:
+
+```text
+CKD
+vs
+Non-CKD
+```
+
+This is much easier to support scientifically with available clinical datasets.
+
+The application can present a model-generated risk score.
+
+But we will **not invent arbitrary thresholds** such as:
+
+```text
+0–30 = Low
+31–70 = Moderate
+71–100 = High
+```
+
+until we examine the model and calibration.
+
+If we want Low/Moderate/High categories, we will define them using a defensible methodology.
+
+---
+
+# 14. What the result looks like
+
+Example UI:
+
+```text
+────────────────────────────
+KIDNEY HEALTH RISK ASSESSMENT
+────────────────────────────
+
+Risk Category
+
+MODERATE
+
+Model Risk Score
+
+74%
+
+Assessment Date
+
+04 September 2026
+
+This is a model-generated risk
+estimate and is not a medical diagnosis.
+```
+
+Then:
+
+**Why did the model produce this result?**
+
+---
+
+# 15. SHAP explanation
+
+Example:
+
+```text
+TOP CONTRIBUTING FEATURES
+
+Serum Creatinine
+████████████
+
+Blood Pressure
+█████████
+
+Blood Glucose
+██████
+
+Diabetes
+█████
+
+Age
+███
+```
+
+Then:
+
+> Serum creatinine made a relatively large contribution to this model prediction.
+
+SHAP values will be generated from the actual model, not manually assigned.
+
+Also:
+
+**SHAP contribution ≠ medical causation.**
+
+It explains model behavior.
+
+---
+
+# 16. Global SHAP
+
+For the research paper we also need global analysis.
+
+For example:
+
+```text
+Feature Importance
+
+Creatinine       ███████████
+Hemoglobin       █████████
+Blood Pressure   ███████
+Age              █████
+Diabetes         ████
+```
+
+This allows us to answer:
+
+> Which features were most influential across the dataset?
+
+---
+
+# 17. Recommendation engine
+
+This will be **rule-based**.
+
+Example:
+
+```text
+IF exercise is below target
+→ Physical activity guidance
+
+IF salty/processed food frequency is high
+→ Dietary awareness guidance
+
+IF smoking is reported
+→ Smoking cessation guidance
+
+IF frequent painkiller use is reported
+→ Encourage discussion with a healthcare professional
+
+IF hypertension is reported
+→ Blood-pressure monitoring/appropriate professional follow-up
+```
+
+The exact health guidance will be based on reputable sources.
+
+We will not invent medical prescriptions.
+
+---
+
+# 18. Recommendation traceability
+
+Every recommendation will store:
+
+```text
+Trigger
+Category
+Recommendation
+Priority
+Source
+```
+
+Example:
+
+```text
+Recommendation:
+Consider reducing frequent consumption
+of highly processed/salty foods.
+
+Triggered by:
+Processed-food frequency = Daily
+
+Category:
+Diet
+
+Priority:
+Medium
+```
+
+User can click:
+
+**Why am I seeing this?**
+
+And get the trigger.
+
+This is an important part of our transparency.
+
+---
+
+# 19. Lifestyle tracking
+
+Daily screen:
+
+```text
+TODAY'S HEALTH
+
+Water             [2.1] L
+Exercise           [35] min
+Sleep              [7.2] hrs
+Salt/processed     [Medium]
+Fast food          [No]
+Sugary drinks      [1]
+Smoking            [No]
+Alcohol            [No]
+Weight             [68] kg
+Stress             [Low]
+
+             SAVE
+```
+
+---
+
+# 20. Lifestyle Progress Score
+
+We'll create:
+
+**Lifestyle Progress Score**
+
+Example:
+
+```text
+72 / 100
+```
+
+based on the user's tracked behavior and consistency.
+
+This is an **application metric**.
+
+It is not:
+
+> “Kidney health = 72%.”
+
+That's an important distinction.
+
+---
+
+# 21. Dashboard
+
+Example:
+
+```text
+┌─────────────────────────────────────┐
+│       KIDNEY HEALTH DASHBOARD       │
+├─────────────────────────────────────┤
+│                                     │
+│ Current Risk       Lifestyle Score  │
+│ MODERATE               72/100       │
+│                                     │
+├─────────────────────────────────────┤
+│ Today's Activity                    │
+│                                     │
+│ Water      2.1 L                    │
+│ Exercise   35 min                   │
+│ Sleep      7.2 hrs                  │
+│ Weight     68 kg                    │
+│                                     │
+├─────────────────────────────────────┤
+│ Top Model Contributors              │
+│                                     │
+│ Creatinine     █████████             │
+│ BP             ███████               │
+│ Diabetes       █████                 │
+│                                     │
+├─────────────────────────────────────┤
+│ Lifestyle Trends                    │
+│                                     │
+│       [Chart.js graphs]             │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+---
+
+# 22. History
+
+```text
+Date        Risk Score     Category
+
+04 Sep      0.74           Moderate
+28 Aug      0.79           Moderate
+21 Aug      0.83           High
+14 Aug      0.85           High
+```
+
+Show a graph.
+
+Label it:
+
+**Model Risk Score History**
+
+not:
+
+**Kidney Health Recovery**
+
+---
+
+# 23. Reassessment
+
+Later:
+
+```text
+Previous score
+0.74
+
+        ↓
+
+New assessment
+
+        ↓
+
+New score
+0.67
+```
+
+Show:
+
+> Change in model-generated risk score: −0.07
+
+Do not claim that this proves the person's medical condition improved.
+
+---
+
+# 24. Technology stack — FINAL
+
+## Frontend
+
+```text
+React
+Tailwind CSS
+Axios
+Chart.js
+```
+
+## Main backend
+
+```text
+Java
+Spring Boot
+Spring MVC
+Spring Data JPA
+Hibernate
+Spring Security
+JWT
+Bean Validation
+Maven
+```
+
+## Database
+
+```text
+PostgreSQL
+Supabase
+```
+
+## ML
+
+```text
+Python
+Pandas
+NumPy
+Scikit-learn
+XGBoost
+SHAP
+```
+
+## Communication
+
+```text
+REST
+HTTP
+JSON
+```
+
+---
+
+# 25. Final architecture
+
+```text
+                         USER
+                           │
+                           ▼
+                    React Frontend
+                           │
+                       REST API
+                           │
+                           ▼
+                  ┌─────────────────┐
+                  │   Spring Boot   │
+                  │     Backend     │
+                  └────────┬────────┘
+                           │
+             ┌─────────────┼──────────────┐
+             │             │              │
+             ▼             ▼              ▼
+        PostgreSQL    Recommendation   Python ML
+        / Supabase       Engine          Service
+                                            │
+                                            ▼
+                                        ML Model
+                                            │
+                                            ▼
+                                          SHAP
+                                            │
+                                            ▼
+                                      Risk + Explanation
+             │             │              │
+             └─────────────┼──────────────┘
+                           ▼
+                    Decision Support
+                           │
+                           ▼
+                       Dashboard
+                           │
+                 ┌─────────┼─────────┐
+                 ▼         ▼         ▼
+               Trends    History   Guidance
+```
+
+---
+
+# 26. Why this architecture is good for Spring Boot
+
+Your main application is genuinely Java-based.
+
+React doesn't directly communicate with the database.
+
+Instead:
+
+```text
+React
+ ↓
+Spring Boot REST API
+ ↓
+Service Layer
+ ↓
+Repository
+ ↓
+PostgreSQL
+```
+
+ML:
+
+```text
+Spring Boot
+ ↓
+HTTP
+ ↓
+Python ML service
+ ↓
+Model + SHAP
+ ↓
+JSON
+ ↓
+Spring Boot
+```
+
+This gives you experience with an architecture that resembles real enterprise application development.
+
+---
+
+# 27. Spring Boot layers
+
+We will use:
+
+```text
+Controller
+    ↓
+Service
+    ↓
+Repository
+    ↓
+Database
+```
+
+Example:
+
+```text
+AssessmentController
+       ↓
+AssessmentService
+       ↓
+AssessmentRepository
+       ↓
+PostgreSQL
+```
+
+And:
+
+```text
+AssessmentService
+       ↓
+MLClient
+       ↓
+Python ML Service
+```
+
+---
+
+# 28. Spring Boot project structure
+
+```text
+backend-springboot/
+│
+├── src/main/java/com/kidneycare/
+│
+├── config/
+│
+├── controller/
+│   ├── AuthController.java
+│   ├── ProfileController.java
+│   ├── HealthProfileController.java
+│   ├── AssessmentController.java
+│   ├── ActivityController.java
+│   ├── RecommendationController.java
+│   └── DashboardController.java
+│
+├── service/
+│   ├── AuthService.java
+│   ├── AssessmentService.java
+│   ├── ActivityService.java
+│   ├── RecommendationService.java
+│   ├── DashboardService.java
+│   └── MlService.java
+│
+├── repository/
+│   ├── UserRepository.java
+│   ├── HealthProfileRepository.java
+│   ├── AssessmentRepository.java
+│   ├── ActivityRepository.java
+│   └── RecommendationRepository.java
+│
+├── entity/
+│   ├── User.java
+│   ├── HealthProfile.java
+│   ├── Assessment.java
+│   ├── Activity.java
+│   └── Recommendation.java
+│
+├── dto/
+│
+├── security/
+│   ├── JwtService.java
+│   ├── JwtAuthenticationFilter.java
+│   └── SecurityConfig.java
+│
+├── exception/
+│
+└── util/
+```
+
+---
+
+# 29. Database design
+
+### users
+
+```text
+id
+name
+email
+password_hash
+role
+created_at
+updated_at
+```
+
+### health_profiles
+
+```text
+id
+user_id
+age
+gender
+height
+weight
+bmi
+diabetes
+hypertension
+family_history
+smoking
+alcohol
+painkiller_usage
+updated_at
+```
+
+### daily_activities
+
+```text
+id
+user_id
+activity_date
+water_intake
+exercise_minutes
+sleep_hours
+salt_level
+fast_food
+sugary_drinks
+smoking
+alcohol
+weight
+stress_level
+created_at
+```
+
+### assessments
+
+```text
+id
+user_id
+risk_score
+risk_category
+model_version
+created_at
+```
+
+### assessment_features
+
+```text
+id
+assessment_id
+feature_name
+feature_value
+shap_value
+```
+
+### recommendations
+
+```text
+id
+assessment_id
+category
+trigger
+recommendation
+priority
+source
+created_at
+```
+
+---
+
+# 30. Why `model_version` matters
+
+Suppose we deploy:
+
+```text
+Model v1
+```
+
+Then improve it:
+
+```text
+Model v2
+```
+
+Old predictions remain associated with v1.
+
+That's good software engineering and useful for reproducible research.
+
+---
+
+# 31. API design
+
+### Authentication
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+```
+
+### Profile
+
+```text
+GET /api/profile
+PUT /api/profile
+```
+
+### Health
+
+```text
+GET /api/health-profile
+PUT /api/health-profile
+```
+
+### Assessment
+
+```text
+POST /api/assessments
+GET /api/assessments
+GET /api/assessments/{id}
+```
+
+### Tracker
+
+```text
+POST /api/activities
+GET /api/activities
+GET /api/activities?from=...&to=...
+```
+
+### Recommendations
+
+```text
+GET /api/recommendations
+```
+
+### Dashboard
+
+```text
+GET /api/dashboard
+```
+
+---
+
+# 32. ML service
+
+Python service:
+
+```text
+POST /predict
+```
+
+Input:
+
+```json
+{
+  "age": 45,
+  "bloodPressure": 150,
+  "glucose": 130,
+  "creatinine": 2.1
+}
+```
+
+Output:
+
+```json
+{
+  "riskScore": 0.74,
+  "prediction": "CKD",
+  "explanations": [
+    {
+      "feature": "serum_creatinine",
+      "value": 2.1,
+      "shapValue": 0.21
+    }
+  ],
+  "modelVersion": "1.0"
+}
+```
+
+The exact fields will be replaced by the final dataset features.
+
+---
+
+# 33. ML pipeline
+
+```text
+Clinical Dataset
+       ↓
+Data Cleaning
+       ↓
+Missing Value Handling
+       ↓
+Encoding
+       ↓
+Feature Engineering
+       ↓
+Train/Test Split
+       ↓
+Cross Validation
+       ↓
+Model Training
+       ↓
+Model Comparison
+       ↓
+Best Model
+       ↓
+Calibration
+       ↓
+SHAP
+       ↓
+Save Model
+       ↓
+ML API
+```
+
+---
+
+# 34. Models
+
+Start with:
+
+```text
+Logistic Regression
+Random Forest
+XGBoost
+```
+
+Then compare.
+
+Don't decide beforehand that Random Forest is the winner.
+
+Let the experimental results determine it.
+
+---
+
+# 35. ML metrics
+
+Report:
+
+```text
+Accuracy
+Precision
+Recall
+F1-score
+ROC-AUC
+Confusion Matrix
+```
+
+Where appropriate:
+
+```text
+PR-AUC
+Brier Score
+Calibration Curve
+```
+
+And:
+
+```text
+Cross-validation Mean ± Standard Deviation
+```
+
+This is much better than reporting only accuracy.
+
+---
+
+# 36. Research experiments
+
+We will have at least six meaningful experiments.
+
+### Experiment 1 — Model comparison
+
+```text
+Logistic Regression
+vs
+Random Forest
+vs
+XGBoost
+```
+
+### Experiment 2 — SHAP
+
+Global and local explanations.
+
+### Experiment 3 — Robustness
+
+Cross-validation.
+
+### Experiment 4 — Calibration
+
+If probability/risk scores are presented.
+
+### Experiment 5 — Feature ablation
+
+Compare selected feature groups.
+
+### Experiment 6 — User evaluation
+
+College participants evaluate:
+
+* understandability
+* explanation clarity
+* recommendation usefulness
+* dashboard usability
+
+---
+
+# 37. Explainability experiment
+
+We can compare two presentations.
+
+### Version A
+
+```text
+Risk: 74%
+```
+
+### Version B
+
+```text
+Risk: 74%
+
+Major contributing factors:
+Creatinine
+Blood pressure
+Diabetes
+
+Explanation:
+...
+```
+
+Then ask participants to rate their understanding.
+
+This gives us evidence for whether explainability adds perceived value.
+
+---
+
+# 38. Recommendation experiment
+
+Compare:
+
+### Generic
+
+> Maintain a healthy lifestyle.
+
+against:
+
+### Personalized
+
+> Your reported physical activity is below your selected target. Consider increasing regular physical activity as appropriate for you.
+
+Then measure:
+
+* relevance
+* usefulness
+* actionability
+
+---
+
+# 39. College lifestyle analysis
+
+We can analyze:
+
+```text
+Students vs Faculty
+```
+
+for:
+
+* exercise
+* sleep
+* hydration
+* processed food
+* sugary drinks
+* smoking
+* alcohol
+* awareness
+
+We can use suitable statistical tests depending on the final sample and variable types.
+
+We shouldn't decide the statistical test before seeing the data.
+
+---
+
+# 40. Research hypotheses
+
+### H1
+
+The selected ML models can achieve useful classification performance on the selected clinical dataset.
+
+### H2
+
+SHAP-based explanations improve perceived understanding compared with prediction-only presentation.
+
+### H3
+
+Personalized recommendations are perceived as more useful than generic recommendations.
+
+### H4
+
+Lifestyle tracking identifies recurring patterns that can be mapped to transparent recommendation rules.
+
+---
+
+# 41. College study output
+
+The paper might eventually report something like:
+
+```text
+Participants: N
+
+Students: X%
+Faculty: Y%
+
+Average explanation-understanding score: X/5
+Average recommendation-usefulness score: X/5
+Dashboard usability score: X/5
+```
+
+We will calculate the actual numbers only after collecting the data.
+
+No fabricated results.
+
+---
+
+# 42. Medical disclaimer
+
+The application should show:
+
+> **This application provides educational risk assessment and lifestyle decision support. It does not diagnose kidney disease and should not replace professional medical advice. Model-generated results should not be interpreted as a clinical diagnosis.**
+
+This should appear on the assessment/result area and appropriately in the application's information/footer.
+
+---
+
+# 43. What we will NOT claim
+
+We will not claim:
+
+> “The model diagnoses CKD.”
+
+We will say:
+
+> “The model estimates CKD risk/classification based on the selected clinical dataset.”
+
+We will not claim:
+
+> “Exercise reduced kidney disease risk by 20%.”
+
+We will say:
+
+> “The user's tracked lifestyle behavior changed.”
+
+We will not claim:
+
+> “SHAP proves creatinine causes CKD.”
+
+We will say:
+
+> “Creatinine contributed strongly to the model's prediction.”
+
+This language matters in the paper.
+
+---
+
+# 44. Research limitations
+
+We'll explicitly discuss:
+
+* dataset size
+* dataset representativeness
+* possible class imbalance
+* self-reported college data
+* absence of clinical validation
+* absence of prospective medical outcomes
+* external validation limitations
+* model probability/calibration limitations
+* recommendation rules are decision-support guidance, not clinical prescriptions
+
+Being honest about limitations actually makes the research more credible.
+
+---
+
+# 45. Four-week development plan
+
+## Week 1 — Research and ML
+
+### Days 1–2
+
+Literature review.
+
+Identify:
+
+* existing CKD ML systems
+* XAI approaches
+* SHAP studies
+* decision-support systems
+* lifestyle monitoring systems
+
+### Days 3–4
+
+Dataset comparison.
+
+### Days 5–6
+
+EDA + preprocessing + model training.
+
+### Day 7
+
+Model comparison + SHAP.
+
+Deliverable:
+
+**Working ML pipeline.**
+
+---
+
+# 46. Week 2 — Spring Boot
+
+Build:
+
+```text
+Spring Boot
+PostgreSQL
+JPA
+Hibernate
+Entities
+Repositories
+Services
+Controllers
+DTOs
+Validation
+Exception handling
+Spring Security
+JWT
+```
+
+Then integrate the Python ML service.
+
+Deliverable:
+
+**Complete REST backend.**
+
+---
+
+# 47. Week 3 — React
+
+Build:
+
+```text
+Landing
+Register
+Login
+Dashboard
+Profile
+Health Profile
+Assessment
+Result
+SHAP
+Recommendations
+Tracker
+History
+Charts
+```
+
+Connect:
+
+```text
+React
+  ↕
+Spring Boot
+  ↕
+PostgreSQL
+```
+
+and:
+
+```text
+Spring Boot
+  ↕
+Python ML
+```
+
+Deliverable:
+
+**Working end-to-end application.**
+
+---
+
+# 48. Week 4 — Research and finishing
+
+```text
+Testing
+↓
+Bug fixing
+↓
+Deployment
+↓
+College data collection
+↓
+User evaluation
+↓
+Statistical analysis
+↓
+ML experiments
+↓
+Figures
+↓
+Research paper
+↓
+PPT
+↓
+Viva preparation
+```
+
+---
+
+# 49. Testing
+
+We will deliberately include testing because it helps your Spring Boot profile.
+
+### Unit testing
+
+JUnit + Mockito.
+
+Test:
+
+* services
+* BMI calculation
+* recommendation rules
+* validation
+* ML response handling
+
+### API testing
+
+Test:
+
+```text
+Register
+Login
+Profile
+Assessment
+Activity
+Dashboard
+Recommendations
+```
+
+### Integration testing
+
+Test:
+
+```text
+Spring Boot
+     ↓
+PostgreSQL
+```
+
+and:
+
+```text
+Spring Boot
+     ↓
+Python ML service
+```
+
+---
+
+# 50. Security
+
+Implement:
+
+```text
+Spring Security
+JWT
+Password hashing
+Authorization
+Input validation
+CORS
+Environment variables
+```
+
+Never put:
+
+```text
+DB password
+JWT secret
+Supabase credentials
+```
+
+inside GitHub.
+
+---
+
+# 51. GitHub project
+
+Final repository:
+
+```text
+kidneycare-xai/
+│
+├── frontend/
+│
+├── backend-springboot/
+│
+├── ml-service/
+│
+├── research/
+│   ├── literature/
+│   ├── notebooks/
+│   ├── data-analysis/
+│   └── results/
+│
+├── docs/
+│   ├── architecture/
+│   ├── database/
+│   └── api/
+│
+├── README.md
+└── docker-compose.yml
+```
+
+The README should eventually contain:
+
+* project overview
+* architecture
+* screenshots
+* technology stack
+* database design
+* API documentation
+* ML methodology
+* SHAP
+* research results
+* setup instructions
+* limitations
+
+---
+
+# 52. What this teaches you for Spring Boot
+
+This isn't just a college project.
+
+You will learn:
+
+```text
+Java
+ ↓
+OOP
+ ↓
+Spring Boot
+ ↓
+Dependency Injection
+ ↓
+REST APIs
+ ↓
+DTOs
+ ↓
+JPA
+ ↓
+Hibernate
+ ↓
+PostgreSQL
+ ↓
+Spring Security
+ ↓
+JWT
+ ↓
+Validation
+ ↓
+Exception Handling
+ ↓
+Testing
+ ↓
+External API Integration
+ ↓
+Deployment
+```
+
+And separately:
+
+```text
+Python
+ ↓
+ML
+ ↓
+SHAP
+ ↓
+REST ML service
+```
+
+That is a very useful combination.
+
+---
+
+# 53. What you can say in a Spring Boot interview
+
+A strong answer would be:
+
+> “I built a full-stack decision-support application using React and Java Spring Boot. Spring Boot handles REST APIs, authentication and authorization using Spring Security and JWT, business logic, validation and PostgreSQL persistence through Spring Data JPA and Hibernate. I integrated the backend with a separate Python ML service over REST for kidney disease risk assessment and SHAP explanations. I also implemented a transparent recommendation engine and longitudinal lifestyle tracking.”
+
+Then if they ask:
+
+> “Why did you use Python for ML?”
+
+You can answer:
+
+> “Python has the ecosystem we needed for the ML pipeline, particularly Scikit-learn, XGBoost and SHAP. Rather than putting ML logic into the Java application, I separated it into an inference service and integrated it through REST. This kept the Spring Boot application responsible for business logic and the ML service responsible for prediction and explainability.”
+
+That's a very reasonable engineering decision.
+
+---
+
+# 54. What not to add
+
+For one month, don't build:
+
+* AI doctor chatbot
+* mobile app
+* wearable integration
+* Google Fit
+* Apple Health
+* appointment booking
+* doctor marketplace
+* social network
+* real-time sensors
+* complicated microservices
+
+They add complexity without materially improving the research.
+
+---
+
+# 55. Optional features after the core is complete
+
+In this order:
+
+```text
+1. Calibration
+2. Better SHAP visualizations
+3. Feature ablation
+4. Robustness analysis
+5. Recommendation traceability
+6. User study
+7. Counterfactual "What-if"
+8. PDF report
+```
+
+The first six are much more valuable than cosmetic features.
+
+---
+
+# 56. The final research contribution
+
+Our paper should ultimately describe the contribution along these lines:
+
+> **This work proposes an integrated, user-centered decision-support framework for kidney disease risk assessment that combines clinically trained machine-learning models, patient-level explainability using SHAP, transparent rule-based personalized recommendations, longitudinal lifestyle monitoring, and real-world user evaluation. The framework separates prediction, explanation, and recommendation responsibilities and provides traceability from user-reported lifestyle factors to generated guidance.**
+
+That is the statement we can build the paper around.
+
+---
+
+# 57. Final picture
+
+At the end, the entire project looks like this:
+
+```text
+                    KIDNEYCARE-XAI
+                           │
+                           ▼
+                     React Web App
+                           │
+                           ▼
+                    Spring Boot API
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+        ▼                  ▼                  ▼
+ Authentication      PostgreSQL         ML Integration
+ Spring Security       Supabase                │
+ JWT                    JPA                    ▼
+                                            Python
+                                              │
+                                    ┌─────────┴─────────┐
+                                    ▼                   ▼
+                                   ML                  SHAP
+                                    │                   │
+                                    └─────────┬─────────┘
+                                              ▼
+                                      Risk + Explanation
+                                              │
+                                              ▼
+                                   Recommendation Engine
+                                              ▲
+                                              │
+                                       Lifestyle Tracker
+                                              │
+                                              ▼
+                                           Dashboard
+                                              │
+                              ┌───────────────┼──────────────┐
+                              ▼               ▼              ▼
+                           History          Trends       Progress
+                                              │
+                                              ▼
+                                      User Evaluation
+                                              │
+                                              ▼
+                                        RESEARCH PAPER
+```
+
+## Final decision
+
+**Yes, this is what I recommend we build.**
+
+The stack is:
+
+**React + Java Spring Boot + Spring Security/JWT + JPA/Hibernate + PostgreSQL/Supabase + Python ML + SHAP.**
+
+The research is:
+
+**Clinical ML + explainability + transparent recommendations + lifestyle monitoring + longitudinal tracking + college user study.**
+
+The core research contribution is:
+
+**turning an explainable CKD prediction model into an integrated, personalized decision-support workflow and evaluating both its technical performance and user-perceived usefulness.**
+
+And the most important practical advantage for you is that you won't finish with just an MCA ML project—you'll have a project where you can genuinely demonstrate **Java, Spring Boot, REST API development, PostgreSQL, authentication, JPA/Hibernate, testing, external-service integration and ML integration**.
+
+**This is the specification I would now use as the baseline for development.**
+
+
+Yes. In short, your project uses this technology stack:
+
+| Technology                      | What we use it for                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Java**                        | Main programming language for backend                                                      |
+| **Spring Boot**                 | Build the main backend/REST APIs                                                           |
+| **Spring MVC**                  | Handle HTTP requests and controllers                                                       |
+| **Spring Data JPA + Hibernate** | Connect Java objects with PostgreSQL and perform database operations                       |
+| **Spring Security + JWT**       | Login, authentication and protected APIs                                                   |
+| **PostgreSQL / Supabase**       | Store users, health profiles, assessments, lifestyle tracking, recommendations and history |
+| **React.js**                    | Build the frontend/user interface                                                          |
+| **Tailwind CSS**                | Style the React application                                                                |
+| **Axios**                       | Connect React frontend to Spring Boot APIs                                                 |
+| **Chart.js**                    | Display lifestyle/risk trends and dashboard charts                                         |
+| **Python**                      | Machine-learning service                                                                   |
+| **Pandas + NumPy**              | Prepare and process ML datasets                                                            |
+| **Scikit-learn**                | Build/evaluate ML models such as Logistic Regression and Random Forest                     |
+| **XGBoost**                     | Advanced ML model for comparison                                                           |
+| **SHAP**                        | Explain why the ML model produced a particular risk prediction                             |
+| **REST API / JSON**             | Communication between React ↔ Spring Boot ↔ Python ML service                              |
+| **Maven**                       | Manage Java/Spring Boot dependencies and build the backend                                 |
+| **Git/GitHub**                  | Version control and project management                                                     |
+| **Docker**                      | Optional deployment/containerization                                                       |
+
+The overall flow is:
+
+**React → Spring Boot → PostgreSQL/Supabase**
+
+and for prediction:
+
+**Spring Boot → Python ML Service → ML Model + SHAP → Spring Boot → React**
+
+The important part for your career is that **Spring Boot is the main backend**, so you'll get hands-on experience with Java, REST APIs, JPA/Hibernate, PostgreSQL, authentication, validation, exception handling, and integrating an external ML service.
+
+Yes. Since you’re starting from scratch and want this project to be useful for both your **MCA research paper** and **Java/Spring Boot career**, we should build it in a fixed order instead of jumping between frontend, backend, and ML.
+
+I’d follow this **30-day plan**.
+
+### Week 1 — ML + Research foundation
+
+**Day 1 — Finalize dataset and project setup**
+
+* Finalize the public CKD dataset.
+* Understand every feature and target.
+* Create the GitHub repository.
+* Create the project folders.
+* Download/store the dataset.
+* Write the project objective and research questions.
+
+**Day 2 — Understand and clean the dataset**
+
+* Load dataset using Pandas.
+* Check rows/columns.
+* Check missing values.
+* Check data types.
+* Check duplicate records.
+* Understand CKD vs non-CKD distribution.
+* Clean the data.
+
+**Day 3 — Exploratory Data Analysis**
+
+* Study age, BP, creatinine, hemoglobin, glucose, etc.
+* Generate graphs.
+* Check relationships between features and CKD.
+* Document important observations.
+
+**Day 4 — Preprocessing**
+
+* Handle missing values properly.
+* Encode categorical variables.
+* Scale numerical features where required.
+* Split into training/testing data.
+* Prevent data leakage.
+
+**Day 5 — First ML models**
+Build:
+
+* Logistic Regression
+* Random Forest
+* XGBoost
+
+Don't decide beforehand which one is best.
+
+**Day 6 — Model evaluation**
+Calculate:
+
+* Accuracy
+* Precision
+* Recall
+* F1-score
+* ROC-AUC
+* Confusion matrix
+
+Use cross-validation as well.
+
+**Day 7 — Explainability**
+
+* Install/use SHAP.
+* Generate global feature importance.
+* Generate individual prediction explanations.
+* Understand what positive/negative SHAP values mean.
+
+At the end of Week 1, you should have a **working ML model + evaluation + SHAP explanations**.
+
+---
+
+### Week 2 — Java + Spring Boot backend
+
+This is the most important week for your **Spring Boot learning**.
+
+**Day 8 — Java fundamentals for the project**
+Learn/practice:
+
+* Classes and objects
+* Encapsulation
+* Inheritance
+* Interfaces
+* Collections
+* Exceptions
+* Java Streams
+* Basic Maven
+
+Don't spend weeks learning Java separately. Learn what the project needs.
+
+**Day 9 — Create Spring Boot project**
+Set up:
+
+* Java
+* Spring Boot
+* Maven
+* Spring Web
+* Spring Data JPA
+* PostgreSQL Driver
+* Validation
+
+Create:
+
+`backend-springboot/`
+
+Run your first Spring Boot application.
+
+**Day 10 — REST API basics**
+Learn:
+
+* `@RestController`
+* `@GetMapping`
+* `@PostMapping`
+* `@PutMapping`
+* `@DeleteMapping`
+* `@RequestBody`
+* `@PathVariable`
+* `@RequestParam`
+
+Build a simple test API.
+
+**Day 11 — PostgreSQL + JPA**
+Create your database.
+
+Learn:
+
+* Entity
+* Repository
+* Primary key
+* Relationships
+* JPA
+* Hibernate
+
+Create the `User` entity and repository.
+
+**Day 12 — Service + Controller architecture**
+
+Implement:
+
+`Controller → Service → Repository → Database`
+
+This is important for understanding real Spring Boot applications.
+
+**Day 13 — Registration/Login**
+Build:
+
+* Register
+* Login
+* Password hashing
+* Validation
+* Error responses
+
+**Day 14 — Spring Security + JWT**
+Implement:
+
+* JWT generation
+* JWT validation
+* Authentication filter
+* Protected APIs
+
+At the end of Week 2, you'll have a **proper Java Spring Boot backend with database and authentication**.
+
+---
+
+### Week 3 — Complete application
+
+**Day 15 — User health profile**
+
+Create:
+
+* Age
+* Gender
+* Height
+* Weight
+* BMI
+* Diabetes
+* Hypertension
+* Family history
+* Smoking
+* Alcohol
+* Painkiller usage
+
+Build the required APIs.
+
+**Day 16 — Risk Assessment API**
+
+Create:
+
+`POST /api/assessments`
+
+Flow:
+
+React → Spring Boot → Python ML → Spring Boot → Database → React
+
+**Day 17 — Connect Python ML service**
+
+Create the Python API using FastAPI.
+
+Spring Boot sends clinical features to Python.
+
+Python returns:
+
+* Prediction
+* Risk score/estimate
+* SHAP values
+* Model version
+
+**Day 18 — Recommendation Engine**
+
+Build a transparent Java rule engine.
+
+Example:
+
+`high salt intake → dietary awareness recommendation`
+
+`frequent painkiller usage → discuss medication use with healthcare professional`
+
+Store the recommendation and its trigger in PostgreSQL.
+
+**Day 19 — Daily Lifestyle Tracker**
+
+Track:
+
+* Water
+* Exercise
+* Sleep
+* Salt/processed food
+* Fast food
+* Sugary drinks
+* Smoking
+* Alcohol
+* Weight
+* Stress
+
+**Day 20 — Dashboard APIs**
+
+Create:
+
+`GET /api/dashboard`
+
+Return:
+
+* Latest assessment
+* Lifestyle progress
+* Today's activity
+* Recommendations
+* Recent history
+
+**Day 21 — History + trends**
+
+Implement:
+
+* Previous assessments
+* Previous risk scores
+* Lifestyle history
+* Weekly/monthly trends
+
+---
+
+### Week 4 — React + research + deployment
+
+**Day 22 — React setup**
+
+Create:
+
+* React
+* Tailwind
+* Axios
+* React Router
+
+Pages:
+
+Login → Register → Dashboard → Profile → Assessment → Result → Tracker → History
+
+**Day 23 — Authentication frontend**
+
+Connect React with Spring Boot.
+
+Implement:
+
+* Register
+* Login
+* JWT storage
+* Protected pages
+* Logout
+
+**Day 24 — Profile + Assessment UI**
+
+Create forms for:
+
+* User profile
+* Health profile
+* Risk assessment
+
+Connect them to Spring Boot.
+
+**Day 25 — Result + SHAP UI**
+
+Show:
+
+* Model-generated risk result
+* Prediction
+* Top contributing features
+* SHAP visualization
+* Disclaimer
+
+Important wording:
+
+> “This application provides educational risk assessment and lifestyle decision support. It does not diagnose kidney disease.”
+
+**Day 26 — Recommendations + Tracker UI**
+
+Build:
+
+* Recommendation cards
+* “Why am I seeing this?” explanation
+* Daily tracking form
+* Lifestyle progress
+
+**Day 27 — Dashboard + charts**
+
+Use Chart.js for:
+
+* Lifestyle trends
+* Exercise
+* Sleep
+* Water
+* Assessment history
+
+**Day 28 — Testing**
+
+Test:
+
+* Login
+* Registration
+* Invalid inputs
+* JWT
+* APIs
+* Database
+* ML prediction
+* Recommendation rules
+* Frontend/backend integration
+
+Add Spring Boot tests where practical.
+
+**Day 29 — Research study + paper**
+
+Prepare your college evaluation.
+
+Collect anonymized data for:
+
+* Lifestyle patterns
+* Kidney-health awareness
+* Explanation clarity
+* Recommendation usefulness
+* Dashboard usability
+
+Then prepare:
+
+* Results
+* Tables
+* Graphs
+* Discussion
+* Limitations
+
+**Day 30 — Deployment + finalization**
+
+Deploy:
+
+* React frontend
+* Spring Boot backend
+* Python ML service
+* PostgreSQL/Supabase
+
+Then prepare:
+
+* GitHub README
+* Architecture diagram
+* Screenshots
+* Research paper
+* PPT
+* Viva questions
+* Resume/LinkedIn project description

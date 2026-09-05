@@ -1,0 +1,52 @@
+# ============================================
+# Git Ignore for KidneyXAI Monorepo
+# ============================================
+
+# Environment and Secrets (NEVER COMMIT SECRETS)
+.env
+*.env
+.env.local
+.env.*.local
+!*.env.example
+
+# Java / Spring Boot
+**/target/
+**/*.jar
+**/*.war
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+
+# Python / ML Microservice
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/env/
+**/*.egg-info/
+**/.eggs/
+**/dist/
+**/build/
+**/.ipynb_checkpoints/
+
+# Node / React / Vite
+**/node_modules/
+**/dist/
+**/.cache/
+
+# OS / IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+**/logs/
+
+# Database dumps / temp files
+scratch_test_supabase.py

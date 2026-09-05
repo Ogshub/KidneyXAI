@@ -1,0 +1,79 @@
+# ========================
+# Java / Spring Boot
+# ========================
+backend-springboot/target/
+backend-springboot/*.jar
+backend-springboot/*.war
+backend-springboot/.mvn/
+backend-springboot/mvnw
+backend-springboot/mvnw.cmd
+
+# ========================
+# Python / ML Service
+# ========================
+ml-service/__pycache__/
+ml-service/**/__pycache__/
+ml-service/*.pyc
+ml-service/.venv/
+ml-service/venv/
+ml-service/env/
+ml-service/*.egg-info/
+ml-service/.eggs/
+ml-service/dist/
+ml-service/build/
+ml-service/.ipynb_checkpoints/
+ml-service/notebooks/.ipynb_checkpoints/
+
+# ========================
+# Node / React
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+frontend/.parcel-cache/
+
+# ========================
+# Environment / Secrets
+# ========================
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# ========================
+# IDE
+# ========================
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ========================
+# Docker
+# ========================
+docker-compose.override.yml
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
+
+# ========================
+# Model artifacts (large)
+# ========================
+ml-service/models/*.pkl
+ml-service/models/*.joblib
+!ml-service/models/.gitkeep
+
+# ========================
+# Data files (may be large)
+# ========================
+ml-service/data/*.csv
+!ml-service/data/.gitkeep
+research/data-analysis/*.csv

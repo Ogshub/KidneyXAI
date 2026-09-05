@@ -1,0 +1,34 @@
+services:
+  # Python ML Microservice (FastAPI + XGBoost + TreeSHAP)
+  - type: web
+    name: kidneycare-ml-service
+    runtime: python
+    rootDir: kidneycare-xai/ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    plan: free
+    autoDeploy: true
+
+  # Spring Boot Backend REST API
+  - type: web
+    name: kidneycare-backend
+    runtime: docker
+    rootDir: kidneycare-xai/backend-springboot
+    dockerfilePath: Dockerfile
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ML_SERVICE_URL
+        fromService:
+          type: web
+          name: kidneycare-ml-service
+          property: host

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: kidneycare-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: kidneycare
+      POSTGRES_USER: ${DB_USERNAME:-kidneycare}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-kidneycare_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-kidneycare}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Python ML Service ────────────────────────────────────
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: kidneycare-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /app/models
+      LOG_LEVEL: info
+    volumes:
+      - ./ml-service/models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Spring Boot Backend ──────────────────────────────────
+  backend:
+    build:
+      context: ./backend-springboot
+      dockerfile: Dockerfile
+    container_name: kidneycare-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/kidneycare
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-kidneycare}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-kidneycare_secret}
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-kidneycare-xai-2026}
+      ML_SERVICE_URL: http://ml-service:8000
+    depends_on:
+      db:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+
+  # ── React Frontend ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kidneycare-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
