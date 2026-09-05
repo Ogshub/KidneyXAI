@@ -1,23 +1,49 @@
 @import "tailwindcss";
 
+/* ── Enable class-based dark mode in Tailwind v4 ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --primary: #0d9488;
     --primary-hover: #0f766e;
     --primary-light: #ccfbf1;
-    --navy-900: #0f172a;
-    --navy-800: #1e293b;
+    --bg-page: #f8fafc;
+    --bg-surface: #ffffff;
+    --border-subtle: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+  }
+
+  .dark {
+    --primary: #14b8a6;
+    --primary-hover: #2dd4bf;
+    --primary-light: #134e4a;
+    --bg-page: #0b0f19;
+    --bg-surface: #111827;
+    --border-subtle: #1f293d;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
     margin: 0;
     padding: 0;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #f8fafc;
-    color: #1e293b;
+    background-color: var(--bg-page);
+    color: var(--text-main);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   #root {
@@ -27,18 +53,43 @@
   }
 }
 
-/* Custom utility animations and scrollbar */
+/* ── Accessible High-Contrast Mode ── */
+html[data-contrast="high"] {
+  --border-subtle: #475569;
+}
+html.dark[data-contrast="high"] {
+  --bg-page: #000000;
+  --bg-surface: #0a0a0a;
+  --border-subtle: #38bdf8;
+}
+
+/* ── Custom Utility Scrollbars ── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
+
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }

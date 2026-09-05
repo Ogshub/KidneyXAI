@@ -10,3 +10,4 @@ export { DailyTracker } from './DailyTracker';
 export { History } from './History';
 export { ResearchSurvey } from './ResearchSurvey';
 export { ResearchAnalytics } from './ResearchAnalytics';
+export { Settings } from './Settings';

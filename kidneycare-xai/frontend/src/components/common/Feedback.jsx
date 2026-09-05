@@ -13,13 +13,13 @@ export const Badge = ({
   };
 
   const variantStyles = {
-    default: 'bg-slate-100 text-slate-700 border border-slate-200',
-    low: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    moderate: 'bg-amber-50 text-amber-700 border border-amber-200',
-    high: 'bg-orange-50 text-orange-700 border border-orange-200',
-    critical: 'bg-rose-50 text-rose-700 border border-rose-200',
-    teal: 'bg-teal-50 text-teal-700 border border-teal-200',
-    blue: 'bg-blue-50 text-blue-700 border border-blue-200',
+    default: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700',
+    low: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+    moderate: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+    high: 'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800',
+    critical: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
+    teal: 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800',
+    blue: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800',
   };
 
   return (
@@ -37,10 +37,10 @@ export const Alert = ({
   onClose,
 }) => {
   const styles = {
-    info: 'bg-sky-50 border-sky-200 text-sky-800',
-    warning: 'bg-amber-50 border-amber-200 text-amber-800',
-    danger: 'bg-rose-50 border-rose-200 text-rose-800',
-    success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    info: 'bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-200',
+    warning: 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200',
+    danger: 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200',
+    success: 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200',
   };
 
   return (
@@ -52,7 +52,7 @@ export const Alert = ({
       {onClose && (
         <button
           onClick={onClose}
-          className="text-current opacity-60 hover:opacity-100 text-sm font-bold ml-2 p-0.5"
+          className="text-current opacity-60 hover:opacity-100 text-sm font-bold ml-2 p-0.5 cursor-pointer"
         >
           ✕
         </button>
@@ -70,7 +70,7 @@ export const Spinner = ({ size = 'md', className = '' }) => {
 
   return (
     <div className={`flex justify-center items-center ${className}`}>
-      <div className={`${sizes[size]} border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin`}></div>
+      <div className={`${sizes[size]} border-4 border-teal-200 dark:border-teal-900 border-t-teal-600 dark:border-t-teal-400 rounded-full animate-spin`}></div>
     </div>
   );
 };
