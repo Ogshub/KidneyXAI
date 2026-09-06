@@ -1,4 +1,4 @@
-# KidneyCare-XAI: Bimodal Explainable AI for Chronic Kidney Disease Detection & Lifestyle Adherence
+# KidneyCare-XAI:Bimodal Explainable AI for Chronic Kidney Disease Detection & Lifestyle Adherence
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.1-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
