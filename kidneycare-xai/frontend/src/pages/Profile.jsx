@@ -1,21 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { profileApi } from '../api';
+import { uploadToCloudinary } from '../utils/cloudinary';
 import { 
   User, 
   Heart, 
   Scale, 
-  ShieldCheck, 
   Check, 
-  AlertCircle,
-  Activity
+  Camera,
+  Upload,
+  Loader2
 } from 'lucide-react';
 import { Card, Button, Input, Select, Alert, Spinner, Badge } from '../components/common';
 
 export const Profile = () => {
   const { user, updateUser } = useAuth();
-  const { isBrutalist } = useTheme();
+  const { isBrutalist, avatar, setAvatar, presetAvatars } = useTheme();
+  const fileInputRef = useRef(null);
 
   const [personalForm, setPersonalForm] = useState({
     name: '',
@@ -42,8 +44,21 @@ export const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [savingHealth, setSavingHealth] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setErrorMsg('');
+    setTimeout(() => setSuccessMsg(''), 4500);
+  };
+
+  const showError = (msg) => {
+    setErrorMsg(msg);
+    setSuccessMsg('');
+    setTimeout(() => setErrorMsg(''), 4500);
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -67,8 +82,8 @@ export const Profile = () => {
             affiliation: profileData.affiliation || '',
           });
           if (profileData.bmi) setBmi(profileData.bmi);
-          // Update user context with profile picture if available
           if (profileData.profilePictureUrl) {
+            setAvatar(profileData.profilePictureUrl);
             updateUser({ profilePictureUrl: profileData.profilePictureUrl });
           }
         }
@@ -86,7 +101,7 @@ export const Profile = () => {
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
-        setErrorMsg('Could not load profile information.');
+        showError('Could not load profile information.');
       } finally {
         setLoading(false);
       }
@@ -95,11 +110,63 @@ export const Profile = () => {
     loadProfile();
   }, []);
 
+  // ── Custom Photo Upload Handler ──
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showError('Please select a valid image file (PNG, JPG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image size exceeds 5MB limit. Please choose a smaller photo.');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+
+      // Upload media to cloud storage
+      const photoUrl = await uploadToCloudinary(file);
+
+      // Set local avatar preview
+      setAvatar(photoUrl);
+
+      // Persist photo URL to profile
+      await profileApi.updateProfile({ profilePictureUrl: photoUrl });
+
+      // Update Auth context and local state
+      updateUser({ profilePictureUrl: photoUrl });
+
+      showSuccess('Profile photo updated successfully!');
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      showError(err.message || 'Failed to upload photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // ── Select Preset Persona ──
+  const handleSelectPreset = async (preset) => {
+    setAvatar(preset.id);
+    updateUser({ profilePictureUrl: preset.id });
+    showSuccess(`Selected avatar: ${preset.label}`);
+
+    try {
+      await profileApi.updateProfile({ profilePictureUrl: preset.id });
+    } catch (err) {
+      console.warn('Failed to sync avatar preset:', err);
+    }
+  };
+
+  // ── Save Demographics ──
   const handlePersonalSubmit = async (e) => {
     e.preventDefault();
     setSavingPersonal(true);
-    setSuccessMsg('');
-    setErrorMsg('');
 
     try {
       const payload = {
@@ -116,27 +183,26 @@ export const Profile = () => {
       const updated = await profileApi.updateProfile(payload);
       updateUser({ name: updated.name });
       if (updated.bmi) setBmi(updated.bmi);
-      setSuccessMsg('Personal demographics and body metrics saved.');
+      showSuccess('Personal demographics and body metrics saved.');
     } catch (err) {
       console.error('Update personal profile error:', err);
-      setErrorMsg(err.response?.data?.message || 'Failed to update personal profile.');
+      showError(err.response?.data?.message || 'Failed to update personal profile.');
     } finally {
       setSavingPersonal(false);
     }
   };
 
+  // ── Save Medical History ──
   const handleHealthSubmit = async (e) => {
     e.preventDefault();
     setSavingHealth(true);
-    setSuccessMsg('');
-    setErrorMsg('');
 
     try {
       await profileApi.updateHealthProfile(healthForm);
-      setSuccessMsg('Clinical health background and medical history updated.');
+      showSuccess('Clinical health background and medical history updated.');
     } catch (err) {
       console.error('Update health profile error:', err);
-      setErrorMsg(err.response?.data?.message || 'Failed to update health profile.');
+      showError(err.response?.data?.message || 'Failed to update health profile.');
     } finally {
       setSavingHealth(false);
     }
@@ -152,6 +218,41 @@ export const Profile = () => {
 
   const bmiCat = getBmiCategory(bmi);
 
+  // ── Render Active Avatar Element ──
+  const renderCurrentAvatar = (size = 'w-24 h-24 text-3xl') => {
+    if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:image/'))) {
+      return (
+        <img
+          src={avatar}
+          alt="Profile Avatar"
+          className={`${size} object-cover shadow-md ${
+            isBrutalist
+              ? 'border-[3px] border-[var(--brutalist-black)]'
+              : 'rounded-2xl ring-4 ring-teal-500/30'
+          }`}
+        />
+      );
+    }
+
+    const preset = presetAvatars.find((p) => p.id === avatar) || presetAvatars[0];
+
+    if (isBrutalist) {
+      return (
+        <div className={`${size} bg-[var(--brutalist-yellow)] text-[var(--brutalist-black)] flex items-center justify-center border-[3px] border-[var(--brutalist-black)] font-black`}>
+          <span>{preset.icon}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`${size} rounded-2xl bg-gradient-to-tr ${preset.bg} text-white flex items-center justify-center ring-4 ring-teal-500/30 shadow-md font-bold`}
+      >
+        <span>{preset.icon}</span>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
@@ -162,7 +263,7 @@ export const Profile = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+    <div className="max-w-5xl mx-auto space-y-8 pb-16">
       {/* Header */}
       <div>
         <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 ${
@@ -179,7 +280,7 @@ export const Profile = () => {
         <p className={`text-sm mt-1 ${
           isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-400'
         }`}>
-          Manage your personal details, BMI indicators, and clinical background conditions.
+          Manage your personal identity, profile picture, body metrics, and clinical history.
         </p>
       </div>
 
@@ -194,6 +295,109 @@ export const Profile = () => {
           {errorMsg}
         </Alert>
       )}
+
+      {/* ── Profile Photo & Avatar Studio Card ── */}
+      <Card
+        title="Profile Photo & Clinical Identity"
+        subtitle="Upload a custom photo or select a clinical persona avatar"
+        icon={Camera}
+      >
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          {/* Avatar Preview & Direct Upload */}
+          <div className="flex flex-col items-center text-center space-y-3 shrink-0">
+            <div className="relative group">
+              {renderCurrentAvatar()}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className={`absolute bottom-0 right-0 p-2 shadow-lg transition-all cursor-pointer ${
+                  isBrutalist
+                    ? 'bg-[var(--brutalist-red)] text-white border-[2px] border-[var(--brutalist-black)] hover:bg-[var(--brutalist-yellow)] hover:text-[var(--brutalist-black)]'
+                    : 'rounded-xl bg-teal-600 text-white hover:bg-teal-700'
+                }`}
+                title="Change Photo"
+              >
+                {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              icon={uploadingPhoto ? Loader2 : Upload}
+            >
+              {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+            </Button>
+          </div>
+
+          {/* User Details & Persona Selection */}
+          <div className="flex-1 space-y-4 text-center md:text-left">
+            <div>
+              <div className="flex flex-col md:flex-row md:items-center gap-2">
+                <h3 className={`text-xl font-extrabold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>
+                  {personalForm.name || user?.name || 'Registered User'}
+                </h3>
+                <div className="flex justify-center md:justify-start">
+                  <Badge variant="teal">{user?.role || 'CLINICIAN'}</Badge>
+                </div>
+              </div>
+              <p className={`text-xs mt-0.5 ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
+                {personalForm.email || user?.email}
+              </p>
+              {personalForm.affiliation && (
+                <p className={`text-xs mt-0.5 font-medium ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-700 dark:text-slate-300'}`}>
+                  {personalForm.affiliation}
+                </p>
+              )}
+            </div>
+
+            {/* Presets Grid */}
+            <div>
+              <p className={`text-xs font-semibold mb-2 ${
+                isBrutalist ? 'text-[var(--text-muted)] uppercase tracking-wider font-black' : 'text-slate-600 dark:text-slate-400'
+              }`}>
+                Or choose a clinical persona:
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {presetAvatars.map((preset) => {
+                  const isSelected = avatar === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleSelectPreset(preset)}
+                      className={`p-2 flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                        isBrutalist
+                          ? `border-[2px] ${isSelected ? 'border-[var(--brutalist-red)] bg-[var(--brutalist-yellow)]/30' : 'border-[var(--border-subtle)] hover:border-[var(--brutalist-red)]'}`
+                          : `rounded-xl ${isSelected ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/40 ring-2 ring-teal-500/20' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40'}`
+                      }`}
+                      title={preset.label}
+                    >
+                      <span className="text-xl">{preset.icon}</span>
+                      <span className={`text-[10px] font-medium truncate w-full text-center ${
+                        isBrutalist ? 'text-[var(--text-muted)] uppercase font-bold' : 'text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {preset.label.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* BMI Card */}
       {bmi && (

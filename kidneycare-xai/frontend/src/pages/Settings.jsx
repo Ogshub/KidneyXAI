@@ -1,16 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { profileApi } from '../api';
-import { uploadToCloudinary } from '../utils/cloudinary';
 import { 
   User, 
   Moon, 
   Sun, 
   Laptop, 
-  Camera, 
-  Upload, 
   Sliders, 
   ShieldCheck, 
   Download, 
@@ -23,20 +19,18 @@ import {
   Palette,
   Zap,
   Eye,
-  Loader2
+  Loader2,
+  LogIn
 } from 'lucide-react';
 import { Card, Button, Input, Select, Badge, Alert, Spinner } from '../components/common';
+import { Link } from 'react-router-dom';
 
 export const Settings = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
-  const navigate = useNavigate();
   const { 
     theme, 
     setTheme, 
     isDark, 
-    avatar, 
-    setAvatar, 
-    presetAvatars, 
     cdsPreferences, 
     updateCdsPreferences,
     themeStyle,
@@ -44,12 +38,10 @@ export const Settings = () => {
     isBrutalist
   } = useTheme();
 
-  const fileInputRef = useRef(null);
+  // ── Tab State: default to 'appearance' if unauthenticated, 'profile' if logged in ──
+  const [activeTab, setActiveTab] = useState(isAuthenticated ? 'profile' : 'appearance');
 
-  // ── Tab State ──
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'appearance' | 'cds' | 'privacy'
-
-  // ── Profile / Demographic Fields (Synced with Supabase & Spring Boot) ──
+  // ── Profile / Demographic Fields (For logged in user) ──
   const [profileName, setProfileName] = useState('');
   const [profileRole, setProfileRole] = useState('CLINICIAN');
   const [affiliation, setAffiliation] = useState('');
@@ -58,9 +50,8 @@ export const Settings = () => {
   const [bio, setBio] = useState('');
 
   // ── Loading & Progress State ──
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // ── CDS Preferences State ──
   const [localCds, setLocalCds] = useState(cdsPreferences);
@@ -75,7 +66,7 @@ export const Settings = () => {
     setTimeout(() => setToastMessage(''), 4500);
   };
 
-  // ── Fetch Profile on Mount from Supabase via Spring Boot ──
+  // ── Fetch Profile on Mount if logged in ──
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -90,15 +81,9 @@ export const Settings = () => {
           setPhone(data.phone || '');
           setTimezone(data.timezone || 'UTC+05:30');
           setBio(data.bio || '');
-
-          if (data.profilePictureUrl) {
-            setAvatar(data.profilePictureUrl);
-            updateUser({ profilePictureUrl: data.profilePictureUrl });
-          }
         }
       } catch (err) {
-        console.warn('Could not load profile from Supabase API:', err);
-        // Fallback to local user state
+        console.warn('Could not load profile:', err);
         if (isMounted) {
           setProfileName(user?.name || '');
           setProfileRole(user?.role || 'CLINICIAN');
@@ -112,69 +97,11 @@ export const Settings = () => {
     return () => { isMounted = false; };
   }, [isAuthenticated]);
 
-  // ── Safeguard: Redirect if not logged in ──
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // ── Cloudinary Media Upload Handler (Cloud Name: mkvwiqlw) ──
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showToast('Please select a valid image file (PNG, JPG, WebP).', 'danger');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size exceeds 5MB limit. Please choose a smaller photo.', 'danger');
-      return;
-    }
-
-    try {
-      setUploadingPhoto(true);
-      showToast('Uploading multimedia to Cloudinary (mkvwiqlw)...', 'info');
-
-      // 1. Upload to Cloudinary (cloud: mkvwiqlw)
-      const cloudUrl = await uploadToCloudinary(file);
-
-      // 2. Set local avatar state
-      setAvatar(cloudUrl);
-
-      // 3. Persist Cloudinary URL to Supabase users table via Spring Boot API
-      await profileApi.updateProfile({ profilePictureUrl: cloudUrl });
-
-      // 4. Update AuthContext state and localStorage
-      updateUser({ profilePictureUrl: cloudUrl });
-
-      showToast('Profile photo uploaded to Cloudinary and saved in Supabase!', 'success');
-    } catch (err) {
-      console.error('Photo upload failed:', err);
-      showToast(err.message || 'Failed to upload photo. Please try again.', 'danger');
-    } finally {
-      setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  // ── Select Preset Persona & Persist to Supabase ──
-  const handleSelectPreset = async (preset) => {
-    setAvatar(preset.id);
-    updateUser({ profilePictureUrl: preset.id });
-    showToast(`Selected avatar: ${preset.label}`);
-
-    try {
-      // Save preset ID to Supabase
-      await profileApi.updateProfile({ profilePictureUrl: preset.id });
-    } catch (err) {
-      console.warn('Failed to sync avatar preset to Supabase:', err);
-    }
-  };
-
-  // ── Save Profile Details to Supabase ──
+  // ── Save Profile Details ──
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) return;
+
     setSavingProfile(true);
 
     try {
@@ -186,10 +113,8 @@ export const Settings = () => {
         bio: bio.trim(),
       };
 
-      // Call Spring Boot PUT /api/profile -> commits to PostgreSQL in Supabase
       const updated = await profileApi.updateProfile(payload);
 
-      // Update active user state
       updateUser({
         name: updated.name || profileName,
         affiliation: updated.affiliation,
@@ -198,10 +123,10 @@ export const Settings = () => {
         bio: updated.bio,
       });
 
-      showToast('Demographics and practice identity saved to Supabase successfully!');
+      showToast('Workspace and practice identity saved successfully!');
     } catch (err) {
-      console.error('Failed to save profile to Supabase:', err);
-      showToast(err.response?.data?.message || 'Failed to save to Supabase. Check backend connection.', 'danger');
+      console.error('Failed to save profile:', err);
+      showToast(err.response?.data?.message || 'Failed to save changes. Please try again.', 'danger');
     } finally {
       setSavingProfile(false);
     }
@@ -217,7 +142,7 @@ export const Settings = () => {
   const handleExportData = () => {
     const exportPayload = {
       exportDate: new Date().toISOString(),
-      user: {
+      user: isAuthenticated ? {
         name: profileName,
         email: user?.email,
         role: profileRole,
@@ -225,7 +150,7 @@ export const Settings = () => {
         phone,
         timezone,
         bio,
-      },
+      } : { status: 'Guest User' },
       preferences: localCds,
       appVersion: 'KidneyCare-XAI v1.0',
       guidelinesConformity: 'KDIGO 2024 Clinical Practice Guideline',
@@ -234,62 +159,24 @@ export const Settings = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `kidneycare_profile_export_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `kidneycare_preferences_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
 
-    showToast('Exported clinical profile snapshot to JSON file.');
+    showToast('Exported preferences snapshot to JSON file.');
   };
 
   // ── Clear Local Cache ──
   const handleClearCache = () => {
-    if (window.confirm('Reset local preferences, custom avatar, and theme cache to system defaults?')) {
-      localStorage.removeItem('kidneycare_avatar');
+    if (window.confirm('Reset local display preferences and theme cache to system defaults?')) {
       localStorage.removeItem('kidneycare_theme');
       localStorage.removeItem('kidneycare_theme_style');
       localStorage.removeItem('kidneycare_cds_prefs');
-      setAvatar('doc-1');
       setTheme('system');
       setThemeStyle('clinical');
       showToast('Local application cache reset to defaults.');
     }
-  };
-
-  // ── Render Active Avatar Element ──
-  const renderCurrentAvatar = (size = 'w-24 h-24 text-3xl') => {
-    // Cloudinary URL or custom base64 photo
-    if (avatar && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:image/'))) {
-      return (
-        <img
-          src={avatar}
-          alt="Avatar Preview"
-          className={`${size} object-cover shadow-md ${
-            isBrutalist
-              ? 'border-[3px] border-[var(--brutalist-black)]'
-              : 'rounded-2xl ring-4 ring-teal-500/30'
-          }`}
-        />
-      );
-    }
-
-    const preset = presetAvatars.find((p) => p.id === avatar) || presetAvatars[0];
-
-    if (isBrutalist) {
-      return (
-        <div className={`${size} bg-[var(--brutalist-yellow)] text-[var(--brutalist-black)] flex items-center justify-center border-[3px] border-[var(--brutalist-black)] font-black`}>
-          <span>{preset.icon}</span>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className={`${size} rounded-2xl bg-gradient-to-tr ${preset.bg} text-white flex items-center justify-center ring-4 ring-teal-500/30 shadow-md font-bold`}
-      >
-        <span>{preset.icon}</span>
-      </div>
-    );
   };
 
   // ── Tab Button Style Helper ──
@@ -317,17 +204,17 @@ export const Settings = () => {
             isBrutalist ? 'text-[var(--brutalist-red)]' : 'text-teal-600 dark:text-teal-400'
           }`}>
             <Sliders className="w-4 h-4" />
-            System & Personalization Preferences
+            System & Workspace Preferences
           </div>
           <h1 className={`text-3xl font-extrabold tracking-tight ${
             isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-slate-100'
           }`}>
-            Settings & Workspace
+            Settings & Customization
           </h1>
           <p className={`text-sm mt-1 ${
             isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-400'
           }`}>
-            Manage your Cloudinary profile photo, Supabase identity, theme style, and medical standards.
+            Customize visual theme language, color scheme, laboratory units, and ergonomics.
           </p>
         </div>
 
@@ -349,10 +236,13 @@ export const Settings = () => {
       <div className={`flex gap-2 overflow-x-auto ${
         isBrutalist ? 'border-b-[3px] border-[var(--border-subtle)]' : 'border-b border-slate-200 dark:border-slate-800'
       }`}>
-        <button onClick={() => setActiveTab('profile')} className={tabStyle('profile')}>
-          <User className="w-4 h-4" />
-          Profile & Cloudinary Avatar
-        </button>
+        {/* Workspace Tab: Visible ONLY when authenticated */}
+        {isAuthenticated && (
+          <button onClick={() => setActiveTab('profile')} className={tabStyle('profile')}>
+            <User className="w-4 h-4" />
+            Workspace & Identity
+          </button>
+        )}
         <button onClick={() => setActiveTab('appearance')} className={tabStyle('appearance')}>
           <Palette className="w-4 h-4" />
           Theme & Display
@@ -363,207 +253,107 @@ export const Settings = () => {
         </button>
         <button onClick={() => setActiveTab('privacy')} className={tabStyle('privacy')}>
           <ShieldCheck className="w-4 h-4" />
-          Data & Privacy
+          Preferences & Cache
         </button>
       </div>
 
-      {/* ── TAB 1: Profile & Avatar Studio ── */}
-      {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Avatar Studio Card */}
+      {/* ── TAB 1: Workspace & Practice Info (Only for Logged-In Users) ── */}
+      {isAuthenticated && activeTab === 'profile' && (
+        <form onSubmit={handleSaveProfile}>
           <Card
-            title="Profile Photo & Avatars"
-            subtitle="Cloudinary media storage (mkvwiqlw) synced to Supabase"
-            icon={Camera}
-            className="lg:col-span-1"
+            title="Identity & Practice Details"
+            subtitle="Manage your clinical role, institution affiliation, and contact information"
+            icon={User}
           >
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="relative group">
-                {renderCurrentAvatar()}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className={`absolute bottom-0 right-0 p-2 shadow-lg transition-all cursor-pointer ${
-                    isBrutalist
-                      ? 'bg-[var(--brutalist-red)] text-white border-[2px] border-[var(--brutalist-black)] hover:bg-[var(--brutalist-yellow)] hover:text-[var(--brutalist-black)]'
-                      : 'rounded-xl bg-teal-600 text-white hover:bg-teal-700'
-                  }`}
-                  title="Upload to Cloudinary"
-                >
-                  {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                </button>
+            {loadingProfile ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3">
+                <Spinner size="md" />
+                <p className="text-xs text-slate-500">Loading user profile...</p>
               </div>
-
-              <div>
-                <h4 className={`font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>
-                  {profileName || user?.name || 'Authorized User'}
-                </h4>
-                <p className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-                  {user?.email}
-                </p>
-                <div className="mt-1">
-                  <Badge variant="teal">{profileRole}</Badge>
-                </div>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
-              />
-
-              <div className="w-full pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  icon={uploadingPhoto ? Loader2 : Upload}
-                  className="w-full"
-                >
-                  {uploadingPhoto ? 'Uploading to Cloudinary...' : 'Upload Photo (Cloudinary)'}
-                </Button>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Stored in cloud: <span className="font-mono font-semibold">mkvwiqlw</span> • URL in Supabase
-                </p>
-              </div>
-
-              {/* Preset Avatars Grid */}
-              <div className={`w-full pt-4 ${isBrutalist ? 'border-t-[3px] border-[var(--border-subtle)]' : 'border-t border-slate-100 dark:border-slate-800'}`}>
-                <p className={`text-xs font-semibold mb-3 text-left ${
-                  isBrutalist ? 'text-[var(--text-muted)] uppercase tracking-wider font-black' : 'text-slate-600 dark:text-slate-400'
-                }`}>
-                  Or pick a clinical persona:
-                </p>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {presetAvatars.map((preset) => {
-                    const isSelected = avatar === preset.id;
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleSelectPreset(preset)}
-                        className={`p-2 flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
-                          isBrutalist
-                            ? `border-[2px] ${isSelected ? 'border-[var(--brutalist-red)] bg-[var(--brutalist-yellow)]/30' : 'border-[var(--border-subtle)] hover:border-[var(--brutalist-red)]'}`
-                            : `rounded-xl ${isSelected ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/40 ring-2 ring-teal-500/20' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-950/40'}`
-                        }`}
-                        title={preset.label}
-                      >
-                        <span className="text-2xl">{preset.icon}</span>
-                        <span className={`text-[10px] font-medium truncate w-full text-center ${
-                          isBrutalist ? 'text-[var(--text-muted)] uppercase font-bold' : 'text-slate-600 dark:text-slate-400'
-                        }`}>
-                          {preset.label.split(' ')[0]}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Profile Details Form (Tailored to Necessary Clinical Info) */}
-          <form onSubmit={handleSaveProfile} className="lg:col-span-2">
-            <Card
-              title="Identity & Practice Info"
-              subtitle="Essential details saved directly to Supabase"
-              icon={User}
-            >
-              {loadingProfile ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-3">
-                  <Spinner size="md" />
-                  <p className="text-xs text-slate-500">Loading profile from Supabase...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                      label="Full Name *"
-                      value={profileName}
-                      onChange={(e) => setProfileName(e.target.value)}
-                      placeholder="e.g. Dr. Alex Mercer"
-                      required
-                    />
-
-                    <Input
-                      label="Registered Account Email"
-                      value={user?.email || ''}
-                      disabled
-                      helperText="Verified authentication identifier"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Select
-                      label="Clinical / Workspace Role"
-                      value={profileRole}
-                      onChange={(e) => setProfileRole(e.target.value)}
-                      options={[
-                        { value: 'CLINICIAN', label: 'Clinician / Nephrologist' },
-                        { value: 'RESEARCHER', label: 'Clinical AI Researcher' },
-                        { value: 'PATIENT', label: 'Patient Self-Management' },
-                        { value: 'STUDENT', label: 'Medical / Postgraduate Student' },
-                      ]}
-                    />
-
-                    <Input
-                      label="Hospital / Department Affiliation"
-                      value={affiliation}
-                      onChange={(e) => setAffiliation(e.target.value)}
-                      placeholder="e.g. Department of Nephrology"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                      label="Emergency Contact / Phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. +91 98765 43210"
-                    />
-
-                    <Select
-                      label="Timezone for Logs & Alerts"
-                      value={timezone}
-                      onChange={(e) => setTimezone(e.target.value)}
-                      options={[
-                        { value: 'UTC+05:30', label: 'Asia/Kolkata (UTC+05:30)' },
-                        { value: 'UTC-05:00', label: 'US Eastern (UTC-05:00)' },
-                        { value: 'UTC+00:00', label: 'UTC / GMT Standard' },
-                        { value: 'UTC+08:00', label: 'Singapore / Perth (UTC+08:00)' },
-                        { value: 'UTC+01:00', label: 'Central European Time (UTC+01:00)' },
-                      ]}
-                    />
-                  </div>
-
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
-                    label="Clinical Focus / Brief Bio (Optional)"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="e.g. CKD stage 3b-5 hemodialysis management and risk modeling"
+                    label="Full Name *"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="e.g. Dr. Alex Mercer"
+                    required
                   />
 
-                  <div className="pt-4 flex items-center justify-between">
-                    <p className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)] font-bold' : 'text-slate-500'}`}>
-                      Changes are persisted directly to Supabase cloud PostgreSQL.
-                    </p>
-                    <Button type="submit" disabled={savingProfile} icon={savingProfile ? Loader2 : Save}>
-                      {savingProfile ? 'Saving to Supabase...' : 'Save to Supabase'}
-                    </Button>
-                  </div>
+                  <Input
+                    label="Registered Account Email"
+                    value={user?.email || ''}
+                    disabled
+                    helperText="Verified authentication identifier"
+                  />
                 </div>
-              )}
-            </Card>
-          </form>
-        </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Select
+                    label="Clinical / Workspace Role"
+                    value={profileRole}
+                    onChange={(e) => setProfileRole(e.target.value)}
+                    options={[
+                      { value: 'CLINICIAN', label: 'Clinician / Nephrologist' },
+                      { value: 'RESEARCHER', label: 'Clinical AI Researcher' },
+                      { value: 'PATIENT', label: 'Patient Self-Management' },
+                      { value: 'STUDENT', label: 'Medical / Postgraduate Student' },
+                    ]}
+                  />
+
+                  <Input
+                    label="Hospital / Department Affiliation"
+                    value={affiliation}
+                    onChange={(e) => setAffiliation(e.target.value)}
+                    placeholder="e.g. Department of Nephrology"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Contact Phone / Pager"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. +91 98765 43210"
+                  />
+
+                  <Select
+                    label="Timezone for Logs & Schedules"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    options={[
+                      { value: 'UTC+05:30', label: 'Asia/Kolkata (UTC+05:30)' },
+                      { value: 'UTC-05:00', label: 'US Eastern (UTC-05:00)' },
+                      { value: 'UTC+00:00', label: 'UTC / GMT Standard' },
+                      { value: 'UTC+08:00', label: 'Singapore / Perth (UTC+08:00)' },
+                      { value: 'UTC+01:00', label: 'Central European Time (UTC+01:00)' },
+                    ]}
+                  />
+                </div>
+
+                <Input
+                  label="Clinical Focus / Brief Bio (Optional)"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="e.g. CKD stage 3b-5 hemodialysis management and risk modeling"
+                />
+
+                <div className="pt-4 flex items-center justify-between">
+                  <p className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)] font-bold' : 'text-slate-500'}`}>
+                    Profile picture management is located on the <Link to="/profile" className="underline font-semibold text-teal-600 dark:text-teal-400">Profile page</Link>.
+                  </p>
+                  <Button type="submit" disabled={savingProfile} icon={savingProfile ? Loader2 : Save}>
+                    {savingProfile ? 'Saving Changes...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        </form>
       )}
 
-      {/* ── TAB 2: Theme & Display Studio ── */}
+      {/* ── TAB 2: Theme & Display Studio (Accessible to Everyone) ── */}
       {activeTab === 'appearance' && (
         <div className="space-y-8">
           {/* Theme Style Switcher (Clinical vs Brutalist) */}
@@ -822,12 +612,12 @@ export const Settings = () => {
         </div>
       )}
 
-      {/* ── TAB 3: Clinical Units & XAI Preferences ── */}
+      {/* ── TAB 3: Clinical Units & XAI Preferences (Accessible to Everyone) ── */}
       {activeTab === 'cds' && (
         <div className="space-y-8">
           <Card
             title="Laboratory Metric Units & Standards"
-            subtitle="Conform your data inputs to regional medical laboratory standards"
+            subtitle="Conform data inputs to regional medical laboratory standards"
             icon={Activity}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -888,12 +678,12 @@ export const Settings = () => {
         </div>
       )}
 
-      {/* ── TAB 4: Data & Privacy Controls ── */}
+      {/* ── TAB 4: Preferences & Cache (Accessible to Everyone) ── */}
       {activeTab === 'privacy' && (
         <div className="space-y-8">
           <Card
             title="Data Export & Portability"
-            subtitle="Download your patient record, assessment logs, and clinical preferences in machine-readable JSON"
+            subtitle="Download clinical preferences and active profile configuration in machine-readable JSON"
             icon={Download}
           >
             <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border ${
@@ -902,9 +692,9 @@ export const Settings = () => {
                 : 'rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40'
             }`}>
               <div>
-                <h4 className={`text-sm font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>Export Complete Health Dossier</h4>
+                <h4 className={`text-sm font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>Export Configuration Dossier</h4>
                 <p className={`text-xs mt-0.5 ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-                  Contains demographic records, affiliation, contact details, and clinical configuration.
+                  Contains active workspace settings, KDIGO metric units, and clinical options.
                 </p>
               </div>
               <Button onClick={handleExportData} variant="outline" icon={Download} size="sm">
@@ -915,7 +705,7 @@ export const Settings = () => {
 
           <Card
             title="Reset & Cache Management"
-            subtitle="Clear cached avatars, session data, and preferences from this browser"
+            subtitle="Clear cached preferences and theme settings from this browser"
             icon={Trash2}
           >
             <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border ${
@@ -926,7 +716,7 @@ export const Settings = () => {
               <div>
                 <h4 className={`text-sm font-bold ${isBrutalist ? 'text-[var(--brutalist-red)] uppercase tracking-wider' : 'text-rose-900 dark:text-rose-200'}`}>Reset Local Client Cache</h4>
                 <p className={`text-xs mt-0.5 ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-rose-700/80 dark:text-rose-400'}`}>
-                  Restores default settings, clears custom photo, and resets theme to clinical/system.
+                  Restores default settings and resets theme to clinical/system.
                 </p>
               </div>
               <Button onClick={handleClearCache} variant="danger" icon={Trash2} size="sm">

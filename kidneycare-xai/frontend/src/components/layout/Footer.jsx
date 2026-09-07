@@ -59,7 +59,7 @@ export const Footer = () => {
                 <li><Link to="/research-survey" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Dataset B Survey</Link></li>
                 <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">FastAPI ML (SHAP)</span></li>
                 <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">Spring Boot API</span></li>
-                <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">PostgreSQL / Supabase</span></li>
+                <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">PostgreSQL Enterprise Cloud</span></li>
               </ul>
             </div>
           </div>
@@ -129,7 +129,7 @@ export const Footer = () => {
               <li><Link to="/research-survey" className="hover:text-teal-400 transition-colors">Dataset B Survey</Link></li>
               <li><span className="text-slate-500">FastAPI ML Service (SHAP)</span></li>
               <li><span className="text-slate-500">Spring Boot Orchestration</span></li>
-              <li><span className="text-slate-500">PostgreSQL / Supabase</span></li>
+              <li><span className="text-slate-500">PostgreSQL Enterprise Cloud</span></li>
             </ul>
           </div>
         </div>

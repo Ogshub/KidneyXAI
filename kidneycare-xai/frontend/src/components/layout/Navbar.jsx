@@ -188,7 +188,18 @@ export const Navbar = () => {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    to="/settings"
+                    className={`h-10 w-10 flex items-center justify-center border-[2px] transition-colors shrink-0 ${
+                      isActive('/settings')
+                        ? 'border-[var(--brutalist-black)] bg-[var(--brutalist-yellow)] text-[var(--brutalist-black)]'
+                        : 'border-transparent text-[var(--text-main)] hover:border-[var(--brutalist-black)] hover:bg-[var(--brutalist-yellow)] hover:text-[var(--brutalist-black)]'
+                    }`}
+                    title="Settings"
+                  >
+                    <SettingsIcon className="w-5 h-5" />
+                  </Link>
                   <Link
                     to="/login"
                     className="h-10 flex items-center px-4 text-xs font-black uppercase tracking-wider border-[2px] border-transparent text-[var(--text-main)] hover:border-[var(--brutalist-black)] hover:bg-[var(--brutalist-yellow)] hover:text-[var(--brutalist-black)] transition-colors"
@@ -394,6 +405,17 @@ export const Navbar = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
+                <Link
+                  to="/settings"
+                  className={`h-10 w-10 flex items-center justify-center rounded-xl transition-colors shrink-0 ${
+                    isActive('/settings')
+                      ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                  title="Settings"
+                >
+                  <SettingsIcon className="w-5 h-5" />
+                </Link>
                 <Link
                   to="/login"
                   className="h-10 flex items-center px-4 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
