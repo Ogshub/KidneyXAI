@@ -1,8 +1,83 @@
 import React from 'react';
 import { AlertTriangle, ShieldCheck, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
 
 export const Footer = () => {
+  const { isBrutalist } = useTheme();
+
+  // ── Brutalist Footer ──
+  if (isBrutalist) {
+    return (
+      <footer className="bg-[var(--brutalist-black)] text-[var(--brutalist-cream)] mt-auto border-t-[3px] border-[var(--brutalist-cream)]">
+        {/* Medical Disclaimer Banner */}
+        <div className="bg-[var(--brutalist-red)] border-b-[3px] border-[var(--brutalist-black)] py-4 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-white shrink-0 mt-0.5" />
+            <div className="text-xs text-white leading-relaxed">
+              <strong className="font-black block sm:inline mr-1 uppercase tracking-wider">
+                ⚠ Medical Disclaimer:
+              </strong>
+              KidneyCare-XAI is an educational research and lifestyle decision-support prototype. It does NOT provide clinical diagnoses or replace professional medical consultations, laboratory testing, or physician guidance.
+            </div>
+          </div>
+        </div>
+
+        {/* Main footer */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-[var(--brutalist-red)] text-white flex items-center justify-center font-black text-sm border-[2px] border-[var(--brutalist-cream)]">
+                  K
+                </div>
+                <span className="text-white font-black text-base tracking-tight uppercase">KidneyCare-XAI</span>
+              </div>
+              <p className="text-xs text-[var(--brutalist-cream)] leading-relaxed max-w-md opacity-80">
+                An explainable machine learning decision-support framework integrating SHAP interpretability, clinical feature analysis, lifestyle tracking, and rule-based preventive health guidance.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-[var(--brutalist-yellow)] pt-1">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="uppercase tracking-wider font-bold">Transparent AI • Rule Traceability • Longitudinal Tracking</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-widest text-[var(--brutalist-yellow)] mb-3 border-b-[2px] border-[var(--brutalist-yellow)] pb-1 inline-block">Navigation</h4>
+              <ul className="space-y-2 text-xs">
+                <li><Link to="/dashboard" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Dashboard</Link></li>
+                <li><Link to="/assessment" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Risk Assessment</Link></li>
+                <li><Link to="/tracker" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Daily Tracker</Link></li>
+                <li><Link to="/recommendations" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Recommendations</Link></li>
+                <li><Link to="/history" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">History & Trends</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-black uppercase tracking-widest text-[var(--brutalist-yellow)] mb-3 border-b-[2px] border-[var(--brutalist-yellow)] pb-1 inline-block">Research</h4>
+              <ul className="space-y-2 text-xs">
+                <li><Link to="/research-survey" className="hover:text-[var(--brutalist-yellow)] transition-colors uppercase tracking-wider font-bold">Dataset B Survey</Link></li>
+                <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">FastAPI ML (SHAP)</span></li>
+                <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">Spring Boot API</span></li>
+                <li><span className="text-[var(--brutalist-cream)] opacity-50 uppercase tracking-wider font-bold">PostgreSQL / Supabase</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t-[2px] border-[var(--brutalist-cream)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--brutalist-cream)] opacity-60">
+            <div className="uppercase tracking-wider font-bold">
+              &copy; {new Date().getFullYear()} KidneyCare-XAI. Academic Research Prototype.
+            </div>
+            <div className="flex items-center gap-1 uppercase tracking-wider font-bold">
+              <span>Built with Explainable AI ↗</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  // ── Clinical (default) Footer ──
   return (
     <footer className="bg-slate-900 text-slate-400 mt-auto border-t border-slate-800">
       {/* Medical Disclaimer Banner */}

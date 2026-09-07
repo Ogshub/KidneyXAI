@@ -26,6 +26,40 @@
     --text-muted: #94a3b8;
   }
 
+  /* ═══════════════════════════════════════════════════
+     BRUTALIST "HOUSE" THEME — Light Mode
+     Inspired by bold, raw, typographic-heavy design
+     ═══════════════════════════════════════════════════ */
+  .brutalist {
+    --primary: #e63326;
+    --primary-hover: #c42b20;
+    --primary-light: #fce8e6;
+    --bg-page: #f5f0e8;
+    --bg-surface: #f5f0e8;
+    --border-subtle: #1a1a1a;
+    --text-main: #1a1a1a;
+    --text-muted: #4a4a4a;
+    --brutalist-yellow: #f5c518;
+    --brutalist-red: #e63326;
+    --brutalist-cream: #f5f0e8;
+    --brutalist-black: #1a1a1a;
+    --brutalist-border: 3px;
+  }
+
+  /* BRUTALIST — Dark Mode */
+  .brutalist.dark {
+    --primary: #e63326;
+    --primary-hover: #ff4538;
+    --primary-light: #3a1a18;
+    --bg-page: #1a1a1a;
+    --bg-surface: #242424;
+    --border-subtle: #f5f0e8;
+    --text-main: #f5f0e8;
+    --text-muted: #b8b0a0;
+    --brutalist-cream: #f5f0e8;
+    --brutalist-black: #1a1a1a;
+  }
+
   html {
     color-scheme: light;
   }
@@ -63,7 +97,109 @@ html.dark[data-contrast="high"] {
   --border-subtle: #38bdf8;
 }
 
-/* ── Custom Utility Scrollbars ── */
+/* ═══════════════════════════════════════════════════
+   BRUTALIST GLOBAL OVERRIDES
+   These cascade through the entire app when .brutalist
+   is applied to <html>, removing rounded corners,
+   enforcing thick borders, and using bold typography.
+   ═══════════════════════════════════════════════════ */
+
+/* Kill all border-radius globally in brutalist mode */
+.brutalist *,
+.brutalist *::before,
+.brutalist *::after {
+  border-radius: 0 !important;
+}
+
+/* Typography: uppercase headings, heavier weights */
+.brutalist h1,
+.brutalist h2,
+.brutalist h3,
+.brutalist h4,
+.brutalist h5,
+.brutalist h6 {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 900;
+}
+
+/* Force monospace on data/numbers in brutalist mode */
+.brutalist [data-mono],
+.brutalist .font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* Brutalist border override for cards, inputs, alerts */
+.brutalist .border,
+.brutalist [class*="border-"] {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Brutalist thick border utility */
+.brutalist .brt-border {
+  border: var(--brutalist-border) solid var(--brutalist-black) !important;
+}
+
+.brutalist.dark .brt-border {
+  border-color: var(--brutalist-cream) !important;
+}
+
+/* Brutalist background accents */
+.brutalist .brt-bg-yellow {
+  background-color: var(--brutalist-yellow) !important;
+  color: var(--brutalist-black) !important;
+}
+
+.brutalist .brt-bg-red {
+  background-color: var(--brutalist-red) !important;
+  color: #ffffff !important;
+}
+
+/* Brutalist button base overrides */
+.brutalist button,
+.brutalist a.btn,
+.brutalist [role="button"] {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+}
+
+/* Brutalist focus styles — sharp, no rounded ring */
+.brutalist *:focus-visible {
+  outline: 3px solid var(--brutalist-red) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Brutalist scrollbar */
+.brutalist ::-webkit-scrollbar-thumb {
+  background: var(--brutalist-black);
+}
+
+.brutalist.dark ::-webkit-scrollbar-thumb {
+  background: var(--brutalist-cream);
+}
+
+.brutalist ::-webkit-scrollbar-track {
+  background: var(--brutalist-cream);
+}
+
+.brutalist.dark ::-webkit-scrollbar-track {
+  background: var(--brutalist-black);
+}
+
+/* Brutalist link hover effect */
+.brutalist a:hover {
+  text-decoration-thickness: 3px;
+}
+
+/* Brutalist selection */
+.brutalist ::selection {
+  background-color: var(--brutalist-yellow);
+  color: var(--brutalist-black);
+}
+
+/* ── Standard Custom Utility Scrollbars ── */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

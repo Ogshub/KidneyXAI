@@ -35,8 +35,15 @@ function App() {
               <Route path="/research-survey" element={<ResearchSurvey />} />
               <Route path="/analytics" element={<ResearchAnalytics />} />
 
-              {/* Settings Route (Accessible to all users) */}
-              <Route path="/settings" element={<Settings />} />
+              {/* Settings Route (Protected: Authenticated users only) */}
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Authenticated Routes */}
               <Route

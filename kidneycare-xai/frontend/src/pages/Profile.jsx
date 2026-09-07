@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { profileApi } from '../api';
 import { 
   User, 
@@ -14,6 +15,7 @@ import { Card, Button, Input, Select, Alert, Spinner, Badge } from '../component
 
 export const Profile = () => {
   const { user, updateUser } = useAuth();
+  const { isBrutalist } = useTheme();
 
   const [personalForm, setPersonalForm] = useState({
     name: '',
@@ -22,6 +24,9 @@ export const Profile = () => {
     gender: 'Other',
     heightCm: '',
     weightKg: '',
+    bio: '',
+    phone: '',
+    affiliation: '',
   });
 
   const [healthForm, setHealthForm] = useState({
@@ -57,8 +62,15 @@ export const Profile = () => {
             gender: profileData.gender || 'Other',
             heightCm: profileData.heightCm ? profileData.heightCm.toString() : '',
             weightKg: profileData.weightKg ? profileData.weightKg.toString() : '',
+            bio: profileData.bio || '',
+            phone: profileData.phone || '',
+            affiliation: profileData.affiliation || '',
           });
           if (profileData.bmi) setBmi(profileData.bmi);
+          // Update user context with profile picture if available
+          if (profileData.profilePictureUrl) {
+            updateUser({ profilePictureUrl: profileData.profilePictureUrl });
+          }
         }
 
         if (healthData) {
@@ -96,6 +108,9 @@ export const Profile = () => {
         gender: personalForm.gender,
         heightCm: personalForm.heightCm ? parseFloat(personalForm.heightCm) : null,
         weightKg: personalForm.weightKg ? parseFloat(personalForm.weightKg) : null,
+        bio: personalForm.bio || null,
+        phone: personalForm.phone || null,
+        affiliation: personalForm.affiliation || null,
       };
 
       const updated = await profileApi.updateProfile(payload);
@@ -141,7 +156,7 @@ export const Profile = () => {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
-        <p className="text-sm text-slate-500">Retrieving user profile...</p>
+        <p className={`text-sm ${isBrutalist ? 'text-[var(--text-muted)] uppercase tracking-wider font-bold' : 'text-slate-500'}`}>Retrieving user profile...</p>
       </div>
     );
   }
@@ -150,14 +165,20 @@ export const Profile = () => {
     <div className="max-w-4xl mx-auto space-y-8 pb-16">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2 text-teal-600 text-xs font-bold uppercase tracking-wider mb-1">
+        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 ${
+          isBrutalist ? 'text-[var(--brutalist-red)]' : 'text-teal-600'
+        }`}>
           <User className="w-4 h-4" />
           User Profile & Baseline Metrics
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className={`text-3xl font-extrabold tracking-tight ${
+          isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-slate-100'
+        }`}>
           Profile & Medical History
         </h1>
-        <p className="text-slate-600 text-sm mt-1">
+        <p className={`text-sm mt-1 ${
+          isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-400'
+        }`}>
           Manage your personal details, BMI indicators, and clinical background conditions.
         </p>
       </div>
@@ -176,18 +197,26 @@ export const Profile = () => {
 
       {/* BMI Card */}
       {bmi && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className={`p-6 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          isBrutalist
+            ? 'bg-[var(--bg-surface)] border-[3px] border-[var(--border-subtle)]'
+            : 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs'
+        }`}>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+            <div className={`w-12 h-12 flex items-center justify-center ${
+              isBrutalist
+                ? 'bg-[var(--brutalist-yellow)] text-[var(--brutalist-black)] border-[2px] border-[var(--brutalist-black)]'
+                : 'rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400'
+            }`}>
               <Scale className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-slate-900">{bmi.toFixed(1)}</span>
-                <span className="text-xs text-slate-500 font-semibold">kg/m²</span>
+                <span className={`text-2xl font-black ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-slate-100'}`}>{bmi.toFixed(1)}</span>
+                <span className={`text-xs font-semibold ${isBrutalist ? 'text-[var(--text-muted)] uppercase' : 'text-slate-500 dark:text-slate-400'}`}>kg/m²</span>
                 {bmiCat && <Badge variant={bmiCat.badge}>{bmiCat.text}</Badge>}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className={`text-xs mt-0.5 ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
                 Automatically calculated from your current height and weight values.
               </p>
             </div>
@@ -260,6 +289,32 @@ export const Profile = () => {
                   value={personalForm.weightKg}
                   onChange={(e) => setPersonalForm({ ...personalForm, weightKg: e.target.value })}
                   placeholder="e.g. 70"
+                />
+              </div>
+
+              <Input
+                label="Bio / About"
+                name="bio"
+                value={personalForm.bio}
+                onChange={(e) => setPersonalForm({ ...personalForm, bio: e.target.value })}
+                placeholder="Short description about yourself"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Phone / Contact"
+                  name="phone"
+                  value={personalForm.phone}
+                  onChange={(e) => setPersonalForm({ ...personalForm, phone: e.target.value })}
+                  placeholder="e.g. +91 9876543210"
+                />
+
+                <Input
+                  label="Affiliation"
+                  name="affiliation"
+                  value={personalForm.affiliation}
+                  onChange={(e) => setPersonalForm({ ...personalForm, affiliation: e.target.value })}
+                  placeholder="e.g. Dept. of Nephrology"
                 />
               </div>
 

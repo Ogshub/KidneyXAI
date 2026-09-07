@@ -28,6 +28,13 @@ export const profileApi = {
     const res = await apiClient.put('/health-profile', data);
     return res.data;
   },
+  // Upload profile picture as base64 data URL
+  uploadProfilePicture: async (base64DataUrl) => {
+    const res = await apiClient.put('/profile', {
+      profilePictureUrl: base64DataUrl,
+    });
+    return res.data;
+  },
 };
 
 export const assessmentApi = {

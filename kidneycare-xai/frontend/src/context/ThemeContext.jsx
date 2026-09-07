@@ -24,6 +24,13 @@ export const ThemeProvider = ({ children }) => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
+  // ── Theme Style State ('clinical' | 'brutalist') ──
+  const [themeStyle, setThemeStyleState] = useState(() => {
+    return localStorage.getItem('kidneycare_theme_style') || 'clinical';
+  });
+
+  const isBrutalist = themeStyle === 'brutalist';
+
   // ── Avatar State ──
   const [avatar, setAvatarState] = useState(() => {
     return localStorage.getItem('kidneycare_avatar') || 'doc-1';
@@ -80,6 +87,16 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [theme]);
 
+  // ── Synchronize Theme Style to DOM ──
+  useEffect(() => {
+    const root = document.documentElement;
+    if (themeStyle === 'brutalist') {
+      root.classList.add('brutalist');
+    } else {
+      root.classList.remove('brutalist');
+    }
+  }, [themeStyle]);
+
   // Apply high-contrast mode attribute if toggled
   useEffect(() => {
     if (cdsPreferences.highContrastMode) {
@@ -97,6 +114,11 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     const next = isDark ? 'light' : 'dark';
     setTheme(next);
+  };
+
+  const setThemeStyle = (newStyle) => {
+    setThemeStyleState(newStyle);
+    localStorage.setItem('kidneycare_theme_style', newStyle);
   };
 
   const setAvatar = (newAvatar) => {
@@ -119,6 +141,9 @@ export const ThemeProvider = ({ children }) => {
         isDark,
         setTheme,
         toggleTheme,
+        themeStyle,
+        setThemeStyle,
+        isBrutalist,
         avatar,
         setAvatar,
         presetAvatars: PRESET_AVATARS,

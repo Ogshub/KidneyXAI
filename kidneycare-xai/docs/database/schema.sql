@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS users (
     email           VARCHAR(255)    NOT NULL UNIQUE,
     password_hash   VARCHAR(255)    NOT NULL,
     role            VARCHAR(20)     NOT NULL DEFAULT 'USER',
+    profile_picture_url TEXT,                   -- Base64 data URL or external URL
+    bio             TEXT,                       -- Short user biography
+    phone           VARCHAR(30),               -- Contact number / pager
+    affiliation     VARCHAR(255),              -- Hospital / department / institution
+    timezone        VARCHAR(50)     DEFAULT 'UTC+05:30',  -- Preferred timezone
     created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

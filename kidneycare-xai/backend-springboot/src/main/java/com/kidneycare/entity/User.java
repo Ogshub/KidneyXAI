@@ -28,6 +28,22 @@ public class User {
     @Builder.Default
     private String role = "USER";
 
+    @Column(name = "profile_picture_url", columnDefinition = "TEXT")
+    private String profilePictureUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(length = 30)
+    private String phone;
+
+    @Column(length = 255)
+    private String affiliation;
+
+    @Column(length = 50)
+    @Builder.Default
+    private String timezone = "UTC+05:30";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

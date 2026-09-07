@@ -27,7 +27,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const data = await authApi.login(credentials);
-    const userData = { id: data.userId || data.id, name: data.name, email: data.email };
+    const userData = {
+      id: data.userId || data.id,
+      name: data.name,
+      email: data.email,
+      profilePictureUrl: data.profilePictureUrl || null,
+    };
     setToken(data.token);
     setUser(userData);
     localStorage.setItem('kidneycare_token', data.token);
@@ -37,7 +42,12 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (formData) => {
     const data = await authApi.register(formData);
-    const userData = { id: data.userId || data.id, name: data.name, email: data.email };
+    const userData = {
+      id: data.userId || data.id,
+      name: data.name,
+      email: data.email,
+      profilePictureUrl: data.profilePictureUrl || null,
+    };
     setToken(data.token);
     setUser(userData);
     localStorage.setItem('kidneycare_token', data.token);

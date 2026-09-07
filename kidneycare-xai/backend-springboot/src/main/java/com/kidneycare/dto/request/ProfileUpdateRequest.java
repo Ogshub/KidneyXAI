@@ -28,4 +28,19 @@ public class ProfileUpdateRequest {
     @Min(value = 10, message = "Weight must be at least 10 kg")
     @Max(value = 500, message = "Weight must be at most 500 kg")
     private Double weightKg;
+
+    // New profile fields
+    private String profilePictureUrl;
+
+    @Size(max = 500, message = "Bio must be at most 500 characters")
+    private String bio;
+
+    @Size(max = 30, message = "Phone must be at most 30 characters")
+    private String phone;
+
+    @Size(max = 255, message = "Affiliation must be at most 255 characters")
+    private String affiliation;
+
+    @Size(max = 50, message = "Timezone must be at most 50 characters")
+    private String timezone;
 }

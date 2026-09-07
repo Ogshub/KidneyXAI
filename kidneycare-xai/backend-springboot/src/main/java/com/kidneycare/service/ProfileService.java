@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ProfileService — owns User profile fields (name, height, weight, BMI).
+ * ProfileService — owns User profile fields (name, height, weight, BMI,
+ * profile picture, bio, phone, affiliation, timezone).
  * No cross-calls to other services.
  */
 @Service
@@ -29,7 +30,12 @@ public class ProfileService {
         ProfileResponse.ProfileResponseBuilder builder = ProfileResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
-                .email(user.getEmail());
+                .email(user.getEmail())
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .bio(user.getBio())
+                .phone(user.getPhone())
+                .affiliation(user.getAffiliation())
+                .timezone(user.getTimezone());
 
         if (hp.isPresent()) {
             HealthProfile profile = hp.get();
@@ -47,11 +53,15 @@ public class ProfileService {
     public ProfileResponse updateProfile(String email, ProfileUpdateRequest request) {
         User user = findUserByEmail(email);
 
-        // Update user name if provided
-        if (request.getName() != null) {
-            user.setName(request.getName());
-            userRepository.save(user);
-        }
+        // Update user-level fields if provided
+        if (request.getName() != null) user.setName(request.getName());
+        if (request.getProfilePictureUrl() != null) user.setProfilePictureUrl(request.getProfilePictureUrl());
+        if (request.getBio() != null) user.setBio(request.getBio());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+        if (request.getAffiliation() != null) user.setAffiliation(request.getAffiliation());
+        if (request.getTimezone() != null) user.setTimezone(request.getTimezone());
+
+        userRepository.save(user);
 
         // Update or create health profile for physical attributes
         HealthProfile hp = healthProfileRepository.findByUserId(user.getId())
