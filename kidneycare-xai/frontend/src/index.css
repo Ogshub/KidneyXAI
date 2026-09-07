@@ -51,14 +51,15 @@
     --primary: #e63326;
     --primary-hover: #ff4538;
     --primary-light: #3a1a18;
-    --bg-page: #1a1a1a;
-    --bg-surface: #242424;
+    --bg-page: #141414;
+    --bg-surface: #1f1f1f;
     --border-subtle: #f5f0e8;
     --text-main: #f5f0e8;
-    --text-muted: #b8b0a0;
+    --text-muted: #d6cebe;
     --brutalist-cream: #f5f0e8;
     --brutalist-black: #1a1a1a;
   }
+
 
   html {
     color-scheme: light;
@@ -229,3 +230,73 @@ html.dark[data-contrast="high"] {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* ═══════════════════════════════════════════════════
+   GLOBAL DARK MODE FONT CONTRAST & LEGIBILITY
+   Guarantees that all headings, numbers, and paragraphs
+   are clearly readable on dark backgrounds across all themes
+   ═══════════════════════════════════════════════════ */
+
+/* Headings in Dark Mode */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: var(--text-main);
+}
+
+/* Hardcoded dark text classes automatically promoted in Dark Mode */
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: var(--text-main) !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: var(--text-muted) !important;
+}
+
+.dark .text-slate-500,
+.dark .text-gray-500 {
+  color: var(--text-muted) !important;
+}
+
+/* Brutalist Dark Mode Specific Overrides */
+.brutalist.dark h1,
+.brutalist.dark h2,
+.brutalist.dark h3,
+.brutalist.dark h4,
+.brutalist.dark h5,
+.brutalist.dark h6 {
+  color: var(--brutalist-cream) !important;
+}
+
+.brutalist.dark .text-slate-900,
+.brutalist.dark .text-slate-800,
+.brutalist.dark .text-slate-700 {
+  color: var(--brutalist-cream) !important;
+}
+
+.brutalist.dark .text-slate-600,
+.brutalist.dark .text-slate-500,
+.brutalist.dark .text-slate-400,
+.brutalist.dark p {
+  color: var(--text-muted) !important;
+}
+
+.brutalist.dark strong {
+  color: var(--brutalist-cream) !important;
+}
+
+/* Subtle border contrast in dark mode */
+.dark .border-emerald-200,
+.dark .border-teal-200 {
+  border-color: rgba(45, 212, 191, 0.4) !important;
+}
+
