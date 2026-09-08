@@ -74,7 +74,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:*",
                 "https://*.vercel.app",
                 "https://*.onrender.com",
-                "https://vercel.app"
+                "https://vercel.app",
+                "https://kidney-xai.kaifkhan.in"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
