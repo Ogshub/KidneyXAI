@@ -85,6 +85,7 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **44** | `44_POSTGRES_VARCHAR_COLUMN_OVERFLOW_FIX_AND_DEFENSIVE_SANITIZATION.md` | PostgreSQL VARCHAR(20) overflow fix, defensive string clamping, and transaction safety | Step 02, 10, 18, 42 |
 | **45** | `45_COMPLETE_END_TO_END_USER_MANUAL_AND_FEATURE_GUIDE.md` | Complete feature walkthrough manual, Dual-Mode assessment guide, and screenshot checklist | Step 01-44 |
 | **46** | `46_PYREFLY_IMPORT_ALIGNMENT_AND_MULTI_THEME_AUTH_REDESIGN.md` | Pyrefly linter import alignment, Windows multiprocessing stability, and multi-theme authentication redesign | Step 39, 40, 45 |
+| **47** | `47_SPLIT_SCREEN_AUTH_UX_REDESIGN_AND_VISUAL_DENSITY.md` | Full-bleed split-screen authentication UX redesign, live SHAP telemetry visualizer, and dual demo quick-switches | Step 45, 46 |
 
 ---
 
