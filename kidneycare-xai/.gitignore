@@ -74,8 +74,6 @@ ml-service/models/*.joblib
 # ========================
 # Data files (may be large)
 # ========================
-!ml-service/data/kidney_disease.csv
-!ml-service/data/Chronic_Kidney_Disease/**
-!ml-service/data/.gitkeep
+!ml-service/data/**
 research/data-analysis/*.csv
 

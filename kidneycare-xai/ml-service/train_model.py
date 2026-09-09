@@ -67,18 +67,20 @@ TARGET_COL   = "classification"
 
 def load_dataset() -> pd.DataFrame:
     """
-    Load UCI CKD dataset. Tries three sources in order:
-      1. Local CSV at data/kidney_disease.csv
-      2. Local ARFF at data/chronic_kidney_disease.arff
-      3. Auto-download via ucimlrepo Python package
+    Load primary clinical CKD dataset. Tries local sources in order:
+      1. Local CSV at data/01_uci_ckd_benchmark_2015.csv
+      2. Local CSV at data/kidney_disease.csv
+      3. Local ARFF at data/chronic_kidney_disease.arff
+      4. Auto-download via ucimlrepo Python package
     """
 
-    # Source 1: local CSV
-    csv_path = DATA_DIR / "kidney_disease.csv"
-    if csv_path.exists():
-        print(f"[INFO] Loading dataset from: {csv_path}")
-        df = pd.read_csv(csv_path)
-        return _normalize_column_names(df)
+    # Source 1: renamed or standard local CSV
+    for candidate in ["01_uci_ckd_benchmark_2015.csv", "kidney_disease.csv"]:
+        csv_path = DATA_DIR / candidate
+        if csv_path.exists():
+            print(f"[INFO] Loading primary dataset from: {csv_path}")
+            df = pd.read_csv(csv_path)
+            return _normalize_column_names(df)
 
     # Source 2: local ARFF
     arff_path = DATA_DIR / "chronic_kidney_disease.arff"
@@ -350,10 +352,44 @@ def compute_global_shap(explainer, X_transformed, feature_names):
     return importance
 
 
+def benchmark_cohorts():
+    """Evaluate performance across all available data cohorts."""
+    results = {}
+
+    # 1. Kaggle Lifestyle & Clinical Cohort (1,659 records)
+    kaggle_path = DATA_DIR / "03_kaggle_ckd_lifestyle_and_clinical_cohort.csv"
+    if kaggle_path.exists():
+        try:
+            from xgboost import XGBClassifier
+            from sklearn.model_selection import StratifiedKFold, cross_val_score
+            df_k = pd.read_csv(kaggle_path)
+            feats = [c for c in df_k.columns if c not in ["PatientID", "DoctorInCharge", "Diagnosis"]]
+            X_k = df_k[feats]
+            y_k = df_k["Diagnosis"]
+            xgb_k = XGBClassifier(n_estimators=100, max_depth=4, learning_rate=0.05, random_state=42, eval_metric="logloss")
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+            acc = cross_val_score(xgb_k, X_k, y_k, cv=cv, scoring="accuracy").mean()
+            auroc = cross_val_score(xgb_k, X_k, y_k, cv=cv, scoring="roc_auc").mean()
+            results["Kaggle Lifestyle & Clinical Cohort (1,659 records)"] = {
+                "accuracy": acc, "auroc": auroc
+            }
+        except Exception as e:
+            print(f"[WARN] Kaggle benchmark skipped: {e}")
+
+    # 2. BD-KDD PMC13092092 Cohort (988 records)
+    bd_path = DATA_DIR / "02_bd_kdd_pmc13092092_bangladesh_cohort.csv"
+    if bd_path.exists():
+        results["BD-KDD Bangladesh Cohort PMC13092092 (988 records)"] = {
+            "status": "Archived in data/ for regional epidemiological research"
+        }
+
+    return results
+
+
 # ─── Save Artifacts ──────────────────────────────────────────────────────────
 
 def save_artifacts(pipeline, preprocessor, explainer, feature_names,
-                   global_importance, metrics):
+                   global_importance, metrics, cohort_benchmarks=None):
     """Save all model artifacts to models/ directory."""
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -382,27 +418,36 @@ def save_artifacts(pipeline, preprocessor, explainer, feature_names,
     # 6. Evaluation report
     report = f"""KidneyCare-XAI — Model Evaluation Report
 ==========================================
-Model       : XGBoost Classifier (XGBClassifier)
-Version     : {MODEL_VERSION}
-Dataset     : UCI Chronic Kidney Disease (400 records, 24 features)
-Validation  : 10-Fold Stratified Cross-Validation
-Training    : {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
+Primary Model : XGBoost Classifier (XGBClassifier)
+Version       : {MODEL_VERSION}
+Primary Data  : 01_uci_ckd_benchmark_2015.csv (400 records, 24 features)
+Validation    : 10-Fold Stratified Cross-Validation
+Training Date : {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-Performance Metrics:
-  Accuracy  : {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)
-  F1-Score  : {metrics['f1_score']:.4f}
-  Precision : {metrics['precision']:.4f}
-  Recall    : {metrics['recall']:.4f}
-  AUROC     : {metrics['auroc']:.4f}
+Primary Clinical Model Performance Metrics:
+  Accuracy    : {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)
+  F1-Score    : {metrics['f1_score']:.4f}
+  Precision   : {metrics['precision']:.4f}
+  Recall      : {metrics['recall']:.4f}
+  AUROC       : {metrics['auroc']:.4f}
 
 Top Features by Mean |SHAP| Value:
 """
     for rank, (name, imp) in enumerate(global_importance[:10], 1):
         report += f"  {rank:2d}. {name:<30} {imp:.6f}\n"
 
-    with open(MODELS_DIR / "evaluation_report.txt", "w") as f:
+    if cohort_benchmarks:
+        report += "\nMulti-Cohort Benchmarks & Datasets Inventory:\n"
+        report += "--------------------------------------------\n"
+        for name, data in cohort_benchmarks.items():
+            if "accuracy" in data:
+                report += f"  * {name}:\n      Accuracy: {data['accuracy']*100:.2f}%, AUROC: {data['auroc']:.4f}\n"
+            else:
+                report += f"  * {name}:\n      {data.get('status', 'Available')}\n"
+
+    with open(MODELS_DIR / "evaluation_report.txt", "w", encoding="utf-8") as f:
         f.write(report)
-    print(f"[INFO] Saved evaluation report → {MODELS_DIR / 'evaluation_report.txt'}")
+    print(f"[INFO] Saved evaluation report -> {MODELS_DIR / 'evaluation_report.txt'}")
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -412,7 +457,7 @@ def main():
     print("  KidneyCare-XAI — Model Training Pipeline")
     print("=" * 55 + "\n")
 
-    # 1. Load
+    # 1. Load primary clinical dataset
     df = load_dataset()
     X, y = preprocess(df)
 
@@ -427,23 +472,25 @@ def main():
     # 4. Create SHAP explainer using the fitted preprocessor + model
     import shap
     print("[INFO] Building TreeSHAP explainer...")
-    X_transformed = preprocessor.fit_transform(X)  # already fitted via pipeline
+    X_transformed = preprocessor.fit_transform(X)
 
-    # Get feature names after transformation
-    feature_names = list(ALL_FEATURES)  # 24 features in order
+    feature_names = list(ALL_FEATURES)
 
-    # Use TreeExplainer for XGBoost (fast tree-based SHAP)
     model = pipeline.named_steps["classifier"]
     explainer = shap.TreeExplainer(model)
 
     # 5. Compute global SHAP importance
     global_importance = compute_global_shap(explainer, X_transformed, feature_names)
 
-    # 6. Save all artifacts
-    save_artifacts(pipeline, preprocessor, explainer, feature_names,
-                   global_importance, metrics)
+    # 6. Benchmark additional cohorts if present
+    print("[INFO] Benchmarking multi-cohort datasets in data/...")
+    cohort_benchmarks = benchmark_cohorts()
 
-    print("\n✅ Training complete! All artifacts saved to models/")
+    # 7. Save all artifacts
+    save_artifacts(pipeline, preprocessor, explainer, feature_names,
+                   global_importance, metrics, cohort_benchmarks)
+
+    print("\n[SUCCESS] Training complete! All artifacts saved to models/")
     print("   The ML service will now use the real XGBoost model instead of Demo mode.")
     print("\n   Start the service with:")
     print("   uvicorn app.main:app --host 127.0.0.1 --port 8000\n")

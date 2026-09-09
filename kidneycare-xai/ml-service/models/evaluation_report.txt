@@ -1,17 +1,17 @@
-KidneyCare-XAI — Model Evaluation Report
+KidneyCare-XAI â€” Model Evaluation Report
 ==========================================
-Model       : XGBoost Classifier (XGBClassifier)
-Version     : v1.0
-Dataset     : UCI Chronic Kidney Disease (400 records, 24 features)
-Validation  : 10-Fold Stratified Cross-Validation
-Training    : 2026-09-09 10:41:11
+Primary Model : XGBoost Classifier (XGBClassifier)
+Version       : v1.0
+Primary Data  : 01_uci_ckd_benchmark_2015.csv (400 records, 24 features)
+Validation    : 10-Fold Stratified Cross-Validation
+Training Date : 2026-09-09 11:40:54
 
-Performance Metrics:
-  Accuracy  : 0.9850 (98.50%)
-  F1-Score  : 0.9881
-  Precision : 0.9849
-  Recall    : 0.9920
-  AUROC     : 0.9981
+Primary Clinical Model Performance Metrics:
+  Accuracy    : 0.9850 (98.50%)
+  F1-Score    : 0.9881
+  Precision   : 0.9849
+  Recall      : 0.9920
+  AUROC       : 0.9981
 
 Top Features by Mean |SHAP| Value:
    1. hemoglobin                     1.692258
@@ -24,3 +24,10 @@ Top Features by Mean |SHAP| Value:
    8. blood_glucose_random           0.262099
    9. red_blood_cell_count           0.184530
   10. hypertension                   0.146275
+
+Multi-Cohort Benchmarks & Datasets Inventory:
+--------------------------------------------
+  * Kaggle Lifestyle & Clinical Cohort (1,659 records):
+      Accuracy: 93.07%, AUROC: 0.8117
+  * BD-KDD Bangladesh Cohort PMC13092092 (988 records):
+      Archived in data/ for regional epidemiological research
