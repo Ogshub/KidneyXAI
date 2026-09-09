@@ -136,7 +136,7 @@ public class MlService {
         return MlPredictionResponse.builder()
                 .riskScore(riskScore)
                 .prediction(prediction)
-                .modelVersion("v1.0-clinical-heuristic")
+                .modelVersion("v1.0-fallback")
                 .explanations(explanations)
                 .build();
     }

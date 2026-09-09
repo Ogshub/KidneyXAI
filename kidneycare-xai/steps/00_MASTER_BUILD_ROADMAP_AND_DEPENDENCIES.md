@@ -82,6 +82,7 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **41** | `41_PRODUCTION_DEPLOYMENT_RENDER_PIPELINE_AND_VERIFICATION.md` | Cloud deployment pipeline, Render blueprint configuration, dataset & model git sync | Step 30, 39, 40 |
 | **42** | `42_AT_HOME_SCREENING_MODE_RESILIENT_FALLBACK_AND_BASELINE_RECOMMENDATIONS.md` | Dual-mode screener UI, ML service URI normalization & fallback, baseline recommendations | Step 17, 18, 27, 28, 41 |
 | **43** | `43_MULTI_COHORT_DATASET_STANDARDIZATION_BENCHMARKING_AND_MODEL_TRAINING.md` | Multi-cohort datasets (PMC13092092, Kaggle, UCI), data catalog standardization, cross-cohort training | Step 39, 41, 42 |
+| **44** | `44_POSTGRES_VARCHAR_COLUMN_OVERFLOW_FIX_AND_DEFENSIVE_SANITIZATION.md` | PostgreSQL VARCHAR(20) overflow fix, defensive string clamping, and transaction safety | Step 02, 10, 18, 42 |
 
 ---
 

@@ -42,16 +42,31 @@ public class AssessmentService {
         // 1. Call ML service (predict + SHAP)
         MlPredictionResponse mlResponse = mlService.predict(request);
 
-        // 2. Determine risk category
+        // 2. Determine risk category & sanitize string column lengths for VARCHAR(20)
         String riskCategory = determineRiskCategory(mlResponse.getRiskScore());
+        if (riskCategory != null && riskCategory.length() > 20) {
+            riskCategory = riskCategory.substring(0, 20);
+        }
+
+        String prediction = mlResponse.getPrediction();
+        if (prediction != null && prediction.length() > 20) {
+            prediction = prediction.substring(0, 20);
+        }
+
+        String modelVersion = mlResponse.getModelVersion();
+        if (modelVersion == null || modelVersion.isBlank()) {
+            modelVersion = "v1.0";
+        } else if (modelVersion.length() > 20) {
+            modelVersion = modelVersion.substring(0, 20);
+        }
 
         // 3. Save assessment
         Assessment assessment = Assessment.builder()
                 .user(user)
                 .riskScore(mlResponse.getRiskScore())
                 .riskCategory(riskCategory)
-                .prediction(mlResponse.getPrediction())
-                .modelVersion(mlResponse.getModelVersion())
+                .prediction(prediction)
+                .modelVersion(modelVersion)
                 .build();
 
         assessment = assessmentRepository.save(assessment);
