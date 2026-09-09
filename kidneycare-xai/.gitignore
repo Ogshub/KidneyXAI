@@ -67,13 +67,15 @@ logs/
 # ========================
 # Model artifacts (large)
 # ========================
-ml-service/models/*.pkl
 ml-service/models/*.joblib
 !ml-service/models/.gitkeep
+!ml-service/models/*.pkl
 
 # ========================
 # Data files (may be large)
 # ========================
-ml-service/data/*.csv
+!ml-service/data/kidney_disease.csv
+!ml-service/data/Chronic_Kidney_Disease/**
 !ml-service/data/.gitkeep
 research/data-analysis/*.csv
+

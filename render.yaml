@@ -4,7 +4,7 @@ services:
     name: kidneycare-ml-service
     runtime: python
     rootDir: kidneycare-xai/ml-service
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python train_model.py
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     plan: free

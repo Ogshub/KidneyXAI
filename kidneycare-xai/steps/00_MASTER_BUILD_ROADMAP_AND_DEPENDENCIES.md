@@ -71,6 +71,15 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **30** | `30_CONTAINERIZATION_END_TO_END_PIPELINE_AND_DEPLOYMENT.md` | `frontend/Dockerfile`, `nginx.conf`, `docker-compose.yml`, E2E test suite | Step 02, 07, 20, 29 |
 | **31** | `31_PART_BY_PART_EXECUTION_AND_VERIFICATION_LOG.md` | Live execution log, running ports, verified credentials, and end-to-end tests | Step 00 - 30 |
 | **32** | `32_CONFIGURATION_SECRETS_AND_DYNAMIC_EVALUATION.md` | Secrets manifest, environment variables, relational persistence pipeline, and dynamic evaluation engine | Step 02, 07, 09, 13, 17, 31 |
+| **33** | `33_BRUTALIST_THEME_SYSTEM_AND_SETTINGS.md` | Neo-brutalist theme tokens, theme toggle, and settings panel | Step 21, 23 |
+| **34** | `34_USER_PROFILE_PICTURE_AND_SUPABASE_SCHEMA_UPDATE.md` | Profile avatar upload, Cloudinary CDN, and Supabase SQL schema update | Step 02, 10, 28 |
+| **35** | `35_BRUTALIST_THEME_FULL_APPLICATION_INTEGRATION.md` | Universal styling integration across dashboard, assessments, and analytics | Step 33 |
+| **36** | `36_SETTINGS_AUTHENTICATION_SUPABASE_PERSISTENCE_CLOUDINARY_AND_NAVBAR_CONSISTENCY.md` | Settings persistence, profile picture upload integration, and navbar alignment | Step 34, 35 |
+| **37** | `37_SETTINGS_PUBLIC_CUSTOMIZATION_PROFILE_STUDIO_MIGRATION_AND_CLEAN_UI.md` | Profile studio migration, public customization controls, and clean UI polish | Step 36 |
+| **38** | `38_DARK_MODE_FONT_CONTRAST_AND_LEGIBILITY_FIXES.md` | Universal dark mode contrast elevation for text, headings, and metrics | Step 35, 37 |
+| **39** | `39_UCI_CKD_DATASET_INGESTION_XGBOOST_TRAINING_AND_SHAP_GENERATION.md` | UCI dataset ingestion, 10-fold CV training (98.5% acc, 99.81% AUROC), TreeSHAP artifacts | Step 03, 05, 06, 07 |
+| **40** | `40_PYTHON_ENVIRONMENT_INTERPRETER_ALIGNMENT_AND_LINTER_FIX.md` | Python interpreter configuration, Pyrefly `missing-import` resolution, workspace settings | Step 03, 39 |
+| **41** | `41_PRODUCTION_DEPLOYMENT_RENDER_PIPELINE_AND_VERIFICATION.md` | Cloud deployment pipeline, Render blueprint configuration, dataset & model git sync | Step 30, 39, 40 |
 
 ---
 

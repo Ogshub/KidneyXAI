@@ -96,41 +96,23 @@ async def predict_risk(request: PredictionRequest):
 @app.get("/model-info", response_model=ModelInfoResponse)
 async def get_model_info():
     """
-    Return global model metadata and feature importance.
-    Used for the research paper's global SHAP analysis and optionally by the dashboard.
+    Return global model metadata and pre-computed feature importance.
+    Uses mean(|SHAP|) values computed during training.
+    Used for the research paper's global SHAP analysis and dashboard.
     """
-    # In demo mode, return placeholder global importance
-    if not artifacts.is_loaded:
-        demo_importance = [
-            FeatureExplanation(feature="serum_creatinine", value=0, shapValue=0.35),
-            FeatureExplanation(feature="hemoglobin", value=0, shapValue=0.28),
-            FeatureExplanation(feature="blood_pressure", value=0, shapValue=0.22),
-            FeatureExplanation(feature="age", value=0, shapValue=0.18),
-            FeatureExplanation(feature="diabetes_mellitus", value=0, shapValue=0.15),
-            FeatureExplanation(feature="albumin", value=0, shapValue=0.12),
-            FeatureExplanation(feature="blood_glucose_random", value=0, shapValue=0.10),
-            FeatureExplanation(feature="blood_urea", value=0, shapValue=0.08),
-        ]
-        return ModelInfoResponse(
-            modelVersion="demo",
-            modelType="DemoMode",
-            featureNames=artifacts.feature_names,
-            globalFeatureImportance=demo_importance,
+    global_importance = []
+    for item in artifacts.global_importance:
+        global_importance.append(
+            FeatureExplanation(
+                feature=item["feature"],
+                value=0.0,
+                shapValue=round(item["mean_abs_shap"], 6),
+            )
         )
 
-    # Real model: compute global importance from SHAP if available
-    global_importance = []
-    if artifacts.explainer is not None:
-        # TODO: compute actual mean(|SHAP|) across a background dataset
-        # For now, return feature names with placeholder importance
-        for i, name in enumerate(artifacts.feature_names):
-            global_importance.append(
-                FeatureExplanation(feature=name, value=0, shapValue=0.0)
-            )
-
     return ModelInfoResponse(
-        modelVersion=artifacts.model_version,
-        modelType=artifacts.model_type,
+        modelVersion=artifacts.model_version if artifacts.is_loaded else "demo",
+        modelType=artifacts.model_type if artifacts.is_loaded else "DemoMode",
         featureNames=artifacts.feature_names,
         globalFeatureImportance=global_importance,
     )
@@ -144,6 +126,7 @@ async def health_check():
         modelLoaded=artifacts.is_loaded,
         modelVersion=artifacts.model_version if artifacts.is_loaded else "demo",
     )
+
 
 
 @app.get("/evaluate", response_model=ModelEvaluationResponse)

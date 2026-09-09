@@ -6,16 +6,18 @@ import com.kidneycare.exception.MlServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * MlService — the ONLY class in the whole backend that speaks to Python.
  * Nothing else calls the ML service directly.
+ *
+ * Performance: Uses configured timeout, pre-built RestClient (singleton).
  */
 @Service
 @Slf4j
@@ -25,9 +27,18 @@ public class MlService {
 
     public MlService(@Value("${ml.service.url}") String mlServiceUrl,
                      @Value("${ml.service.timeout-ms}") long timeoutMs) {
+
+        // Configure HTTP client with explicit connect + read timeouts
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Math.min(timeoutMs / 3, 10000)); // connect: max 10s
+        factory.setReadTimeout((int) timeoutMs);                         // read: full timeout
+
         this.restClient = RestClient.builder()
                 .baseUrl(mlServiceUrl)
+                .requestFactory(factory)
                 .build();
+
+        log.info("MlService initialized — URL: {}, timeout: {}ms", mlServiceUrl, timeoutMs);
     }
 
     /**
@@ -60,6 +71,8 @@ public class MlService {
                     response.getPrediction(), response.getRiskScore());
 
             return response;
+        } catch (MlServiceException e) {
+            throw e;
         } catch (Exception e) {
             log.error("ML service call failed: {}", e.getMessage(), e);
             throw new MlServiceException("ML prediction service unavailable: " + e.getMessage());
@@ -68,11 +81,13 @@ public class MlService {
 
     public Map<String, Object> getModelEvaluation() {
         try {
-            return restClient.get()
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = restClient.get()
                     .uri("/evaluate")
                     .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(Map.class);
+            return result;
         } catch (Exception e) {
             log.error("Failed to fetch ML model evaluation: {}", e.getMessage());
             return Map.of("status", "unavailable", "message", e.getMessage());

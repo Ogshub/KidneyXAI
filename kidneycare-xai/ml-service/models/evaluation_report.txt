@@ -1,0 +1,26 @@
+KidneyCare-XAI — Model Evaluation Report
+==========================================
+Model       : XGBoost Classifier (XGBClassifier)
+Version     : v1.0
+Dataset     : UCI Chronic Kidney Disease (400 records, 24 features)
+Validation  : 10-Fold Stratified Cross-Validation
+Training    : 2026-09-09 10:41:11
+
+Performance Metrics:
+  Accuracy  : 0.9850 (98.50%)
+  F1-Score  : 0.9881
+  Precision : 0.9849
+  Recall    : 0.9920
+  AUROC     : 0.9981
+
+Top Features by Mean |SHAP| Value:
+   1. hemoglobin                     1.692258
+   2. serum_creatinine               1.067941
+   3. specific_gravity               0.927234
+   4. albumin                        0.531405
+   5. packed_cell_volume             0.432734
+   6. sodium                         0.321840
+   7. age                            0.293035
+   8. blood_glucose_random           0.262099
+   9. red_blood_cell_count           0.184530
+  10. hypertension                   0.146275

@@ -14,6 +14,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 35000, // 35 second timeout (handles Render cold-start ~30s)
 });
 
 // Request interceptor: attach JWT token if present
@@ -28,14 +29,31 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 unauthenticated
+// Response interceptor: handle 401 unauthenticated and 503 cold-start retry
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+
+    // Retry once on 503 (Render cold start) or network timeout
+    if (
+      !config?._retried &&
+      (error.response?.status === 503 || error.code === 'ECONNABORTED' || !error.response)
+    ) {
+      config._retried = true;
+      // Wait 2s before retry on cold-start
+      await new Promise((r) => setTimeout(r, 2000));
+      return apiClient(config);
+    }
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('kidneycare_token');
       localStorage.removeItem('kidneycare_user');
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
+      if (
+        window.location.pathname !== '/login' &&
+        window.location.pathname !== '/register' &&
+        window.location.pathname !== '/'
+      ) {
         window.location.href = '/login';
       }
     }

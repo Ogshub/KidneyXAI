@@ -1,18 +1,20 @@
 /**
- * Media Management Utility
- * Handles multimedia uploads to Cloudinary storage and returns image URL.
+ * Image Upload Utility
+ * Resizes and compresses an uploaded image locally for instant profile picture display.
+ * Uses canvas-based resizing: fast, no network request, works offline.
  */
-
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'mkvwiqlw';
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'kidneycare';
 
 /**
- * Resizes and compresses an image file to a lightweight data URL
- * (max 400x400 px, optimal for avatars and profiles).
+ * Resizes and compresses an image file to a lightweight JPEG data URL.
+ * Max 400x400 px at 85% quality — ideal for avatar/profile photos.
+ *
+ * @param {File|Blob} file - The image file to process
+ * @returns {Promise<string>} A base64 JPEG data URL
  */
 const createOptimizedDataUrl = (file) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
@@ -21,6 +23,7 @@ const createOptimizedDataUrl = (file) => {
         let width = img.width;
         let height = img.height;
 
+        // Scale down to maxDim while preserving aspect ratio
         if (width > height && width > maxDim) {
           height = Math.round((height * maxDim) / width);
           width = maxDim;
@@ -34,26 +37,26 @@ const createOptimizedDataUrl = (file) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Quality 0.85 WebP or JPEG
+        // 85% JPEG — good balance of quality vs size
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         resolve(dataUrl);
       };
-      img.onerror = () => resolve(e.target?.result);
+      img.onerror = () => reject(new Error('Failed to decode image'));
       img.src = e.target?.result;
     };
-    reader.onerror = () => resolve(null);
+
+    reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
   });
 };
 
 /**
- * Uploads an image file to Cloudinary.
- * Makes a single clean attempt to upload using the configured unsigned preset.
- * If the Cloudinary preset is not yet whitelisted on the account,
- * gracefully falls back to an optimized image data URL without console spam.
+ * Processes an image file for profile display.
+ * Validates size, resizes locally, and returns a data URL — instantly.
+ * No network request, no external dependency, no cold-start delays.
  *
  * @param {File|Blob} file - The file to upload
- * @returns {Promise<string>} The URL of the image
+ * @returns {Promise<string>} The optimized image data URL
  */
 export const uploadToCloudinary = async (file) => {
   if (!file) throw new Error('No file provided for upload.');
@@ -62,35 +65,10 @@ export const uploadToCloudinary = async (file) => {
     throw new Error('Image size exceeds 5MB limit. Please choose a smaller photo.');
   }
 
-  // Attempt upload to Cloudinary with configured preset
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.secure_url) {
-        return data.secure_url;
-      }
-    }
-  } catch (err) {
-    // Network or CORS issue, proceed to seamless fallback
-  }
-
-  // Resilient fallback: optimized image data URL
   const optimizedUrl = await createOptimizedDataUrl(file);
   if (optimizedUrl) {
     return optimizedUrl;
   }
 
-  throw new Error('Could not process the selected image.');
+  throw new Error('Could not process the selected image. Please try a different file.');
 };
