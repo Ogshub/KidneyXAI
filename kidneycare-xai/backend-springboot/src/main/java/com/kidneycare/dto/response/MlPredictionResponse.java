@@ -23,6 +23,7 @@ public class MlPredictionResponse {
     private String modelVersion;
 
     @Data
+    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MlFeatureExplanation {

@@ -9,7 +9,11 @@ import {
   CheckCircle2, 
   FlaskConical, 
   Activity,
-  ArrowRight
+  ArrowRight,
+  Home,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck
 } from 'lucide-react';
 import { Button, Input, Select, Card, Alert } from '../components/common';
 
@@ -17,6 +21,8 @@ export const Assessment = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mode, setMode] = useState('HOME'); // 'HOME' | 'LAB'
+  const [showOptionalLabs, setShowOptionalLabs] = useState(false);
 
   const initialForm = {
     age: '45',
@@ -165,24 +171,72 @@ export const Assessment = () => {
             <FlaskConical className="w-4 h-4" />
             Machine Learning Inference
           </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Kidney Disease Risk Assessment
           </h1>
-          <p className="text-slate-600 text-sm mt-1">
-            Enter your clinical measurements to run the XGBoost/SHAP decision-support engine.
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
+            {mode === 'HOME'
+              ? 'Quick at-home screener based on your vitals, symptoms, and lifestyle — no lab test required.'
+              : 'Enter your clinical lab measurements to run the full 24-feature XGBoost/SHAP decision-support engine.'}
           </p>
         </div>
 
-        {/* Preset Sample Fillers */}
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={loadSampleHealthy}>
-            Load Normal Sample
-          </Button>
-          <Button size="sm" variant="secondary" onClick={loadSampleElevatedRisk}>
-            Load Elevated Sample
-          </Button>
-        </div>
+        {/* Preset Sample Fillers (visible in Lab mode) */}
+        {mode === 'LAB' && (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={loadSampleHealthy}>
+              Load Normal Sample
+            </Button>
+            <Button size="sm" variant="secondary" onClick={loadSampleElevatedRisk}>
+              Load Elevated Sample
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Mode Selector */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-slate-100 dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700">
+        <button
+          type="button"
+          onClick={() => setMode('HOME')}
+          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
+            mode === 'HOME'
+              ? 'bg-white dark:bg-neutral-900 text-teal-600 dark:text-teal-400 shadow-sm border border-slate-200/80 dark:border-neutral-700'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Home className="w-4 h-4" />
+          <span>Home Lifestyle & Symptom Check</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-semibold ml-1">
+            No Lab Test Needed
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMode('LAB')}
+          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
+            mode === 'LAB'
+              ? 'bg-white dark:bg-neutral-900 text-teal-600 dark:text-teal-400 shadow-sm border border-slate-200/80 dark:border-neutral-700'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <FlaskConical className="w-4 h-4" />
+          <span>Clinical Lab Report Analyzer</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-slate-800 dark:text-slate-200 font-semibold ml-1">
+            Full 24 Markers
+          </span>
+        </button>
+      </div>
+
+      {mode === 'HOME' && (
+        <div className="p-4 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-teal-950 dark:text-teal-200 leading-relaxed">
+            <strong className="font-semibold text-teal-900 dark:text-teal-100">At-Home Self-Screening Mode:</strong> You do not need hospital blood tests or urine reports to use this! Answer simple questions about your age, resting blood pressure, physical symptoms, and health history. The AI automatically applies standard healthy clinical medians for unmeasured lab metrics.
+          </div>
+        </div>
+      )}
 
       {error && (
         <Alert type="danger" onClose={() => setError('')}>
@@ -193,7 +247,7 @@ export const Assessment = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Section 1: Vitals & Demographics */}
-        <Card title="1. Demographics & Vitals" icon={HeartPulse}>
+        <Card title="1. Demographics & Blood Pressure" icon={HeartPulse}>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <Input
               label="Age (Years)"
@@ -206,18 +260,18 @@ export const Assessment = () => {
               required
             />
             <Input
-              label="Blood Pressure (mm/Hg)"
+              label="Resting Blood Pressure (mm/Hg)"
               type="number"
               name="bloodPressure"
               value={form.bloodPressure}
               onChange={handleChange}
-              helperText="Diastolic / resting (e.g., 80)"
+              helperText="Diastolic / resting (e.g., 80 mm/Hg)"
               min="40"
               max="200"
               required
             />
             <Select
-              label="Hypertension History"
+              label="Known Hypertension History"
               name="hypertension"
               value={form.hypertension}
               onChange={handleChange}
@@ -229,174 +283,41 @@ export const Assessment = () => {
           </div>
         </Card>
 
-        {/* Section 2: Blood Chemistry & Renal Biomarkers */}
-        <Card title="2. Renal & Blood Chemistry Panel" icon={FlaskConical}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            <Input
-              label="Serum Creatinine (mg/dL)"
-              type="number"
-              step="0.1"
-              name="serumCreatinine"
-              value={form.serumCreatinine}
-              onChange={handleChange}
-              helperText="Normal: 0.6 – 1.3 mg/dL"
-            />
-            <Input
-              label="Blood Urea (mg/dL)"
-              type="number"
-              step="0.1"
-              name="bloodUrea"
-              value={form.bloodUrea}
-              onChange={handleChange}
-              helperText="Normal: 15 – 45 mg/dL"
-            />
-            <Input
-              label="Hemoglobin (g/dL)"
-              type="number"
-              step="0.1"
-              name="hemoglobin"
-              value={form.hemoglobin}
-              onChange={handleChange}
-              helperText="Normal: 13.5 – 17.5 g/dL"
-            />
-            <Input
-              label="Random Blood Glucose (mg/dL)"
-              type="number"
-              step="1"
-              name="bloodGlucoseRandom"
-              value={form.bloodGlucoseRandom}
-              onChange={handleChange}
-              helperText="Normal: < 140 mg/dL"
-            />
-            <Input
-              label="Serum Sodium (mEq/L)"
-              type="number"
-              step="0.1"
-              name="sodium"
-              value={form.sodium}
-              onChange={handleChange}
-              helperText="Normal: 135 – 145 mEq/L"
-            />
-            <Input
-              label="Serum Potassium (mEq/L)"
-              type="number"
-              step="0.1"
-              name="potassium"
-              value={form.potassium}
-              onChange={handleChange}
-              helperText="Normal: 3.5 – 5.0 mEq/L"
-            />
-            <Input
-              label="Packed Cell Volume (PCV %)"
-              type="number"
-              step="1"
-              name="packedCellVolume"
-              value={form.packedCellVolume}
-              onChange={handleChange}
-              helperText="Normal: 40 – 50%"
-            />
-            <Input
-              label="White Blood Cell Count"
-              type="number"
-              step="100"
-              name="whiteBloodCellCount"
-              value={form.whiteBloodCellCount}
-              onChange={handleChange}
-              helperText="Normal: 4,000 – 11,000 /µL"
-            />
-            <Input
-              label="Red Blood Cell Count (M/µL)"
-              type="number"
-              step="0.1"
-              name="redBloodCellCount"
-              value={form.redBloodCellCount}
-              onChange={handleChange}
-              helperText="Normal: 4.5 – 5.9 M/µL"
-            />
-          </div>
-        </Card>
-
-        {/* Section 3: Urinalysis */}
-        <Card title="3. Urinalysis Parameters" icon={Activity}>
+        {/* Section 2: Symptoms & Medical History */}
+        <Card title="2. Early Warning Signs & Health History" icon={Sparkles}>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <Select
-              label="Specific Gravity"
-              name="specificGravity"
-              value={form.specificGravity}
+              label="Swollen Feet / Ankles (Edema)"
+              name="pedalEdema"
+              value={form.pedalEdema}
               onChange={handleChange}
               options={[
-                { value: '1.005', label: '1.005' },
-                { value: '1.010', label: '1.010' },
-                { value: '1.015', label: '1.015' },
-                { value: '1.020', label: '1.020' },
-                { value: '1.025', label: '1.025' },
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Yes (Noticeable swelling)' },
               ]}
             />
             <Select
-              label="Albumin (Proteinuria)"
-              name="albumin"
-              value={form.albumin}
+              label="Appetite Status"
+              name="appetite"
+              value={form.appetite}
               onChange={handleChange}
               options={[
-                { value: '0', label: '0 (Nil)' },
-                { value: '1', label: '1 (Trace / +)' },
-                { value: '2', label: '2 (++)' },
-                { value: '3', label: '3 (+++)' },
-                { value: '4', label: '4 (++++)' },
-                { value: '5', label: '5 (Severe)' },
+                { value: 'good', label: 'Good / Normal' },
+                { value: 'poor', label: 'Poor (Loss of appetite)' },
               ]}
             />
             <Select
-              label="Urine Sugar (Glucosuria)"
-              name="sugar"
-              value={form.sugar}
+              label="Fatigue / Anemia Signs"
+              name="anemia"
+              value={form.anemia}
               onChange={handleChange}
               options={[
-                { value: '0', label: '0 (Nil)' },
-                { value: '1', label: '1 (+)' },
-                { value: '2', label: '2 (++)' },
-                { value: '3', label: '3 (+++)' },
-                { value: '4', label: '4 (++++)' },
+                { value: 'no', label: 'No (Normal energy)' },
+                { value: 'yes', label: 'Yes (Frequent weakness / fatigue)' },
               ]}
             />
             <Select
-              label="Red Blood Cells in Urine"
-              name="redBloodCells"
-              value={form.redBloodCells}
-              onChange={handleChange}
-              options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'abnormal', label: 'Abnormal' },
-              ]}
-            />
-            <Select
-              label="Pus Cells in Urine"
-              name="pusCell"
-              value={form.pusCell}
-              onChange={handleChange}
-              options={[
-                { value: 'normal', label: 'Normal' },
-                { value: 'abnormal', label: 'Abnormal' },
-              ]}
-            />
-            <Select
-              label="Pus Cell Clumps"
-              name="pusCellClumps"
-              value={form.pusCellClumps}
-              onChange={handleChange}
-              options={[
-                { value: 'notpresent', label: 'Not Present' },
-                { value: 'present', label: 'Present' },
-              ]}
-            />
-          </div>
-        </Card>
-
-        {/* Section 4: Clinical History & Symptoms */}
-        <Card title="4. Clinical Conditions & Symptoms" icon={Sparkles}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            <Select
-              label="Diabetes Mellitus"
+              label="Diabetes History"
               name="diabetesMellitus"
               value={form.diabetesMellitus}
               onChange={handleChange}
@@ -406,39 +327,9 @@ export const Assessment = () => {
               ]}
             />
             <Select
-              label="Coronary Artery Disease"
+              label="Heart / Artery Disease"
               name="coronaryArteryDisease"
               value={form.coronaryArteryDisease}
-              onChange={handleChange}
-              options={[
-                { value: 'no', label: 'No' },
-                { value: 'yes', label: 'Yes' },
-              ]}
-            />
-            <Select
-              label="Appetite"
-              name="appetite"
-              value={form.appetite}
-              onChange={handleChange}
-              options={[
-                { value: 'good', label: 'Good' },
-                { value: 'poor', label: 'Poor' },
-              ]}
-            />
-            <Select
-              label="Pedal Edema (Swollen Ankles/Feet)"
-              name="pedalEdema"
-              value={form.pedalEdema}
-              onChange={handleChange}
-              options={[
-                { value: 'no', label: 'No' },
-                { value: 'yes', label: 'Yes' },
-              ]}
-            />
-            <Select
-              label="Anemia"
-              name="anemia"
-              value={form.anemia}
               onChange={handleChange}
               options={[
                 { value: 'no', label: 'No' },
@@ -448,10 +339,249 @@ export const Assessment = () => {
           </div>
         </Card>
 
-        <div className="p-4 rounded-xl bg-slate-100 text-xs text-slate-600 flex items-start gap-3">
+        {/* Home Mode: Optional Collapsible Lab Values */}
+        {mode === 'HOME' && (
+          <div className="border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 bg-white dark:bg-neutral-900 shadow-sm space-y-4">
+            <button
+              type="button"
+              onClick={() => setShowOptionalLabs(!showOptionalLabs)}
+              className="flex items-center justify-between w-full text-left font-semibold text-slate-800 dark:text-slate-200 text-sm hover:text-teal-600 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <FlaskConical className="w-4 h-4 text-teal-600" />
+                <span>Have any recent blood or urine test numbers? (Optional)</span>
+              </div>
+              {showOptionalLabs ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+            <p className="text-xs text-slate-500">
+              If you leave this closed, our algorithm automatically uses standard healthy median baselines for lab parameters.
+            </p>
+
+            {showOptionalLabs && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 pt-3 border-t border-slate-100 dark:border-neutral-800">
+                <Input
+                  label="Serum Creatinine (mg/dL)"
+                  type="number"
+                  step="0.1"
+                  name="serumCreatinine"
+                  value={form.serumCreatinine}
+                  onChange={handleChange}
+                  helperText="Normal: 0.6 – 1.3 mg/dL"
+                />
+                <Input
+                  label="Blood Urea / BUN (mg/dL)"
+                  type="number"
+                  step="0.1"
+                  name="bloodUrea"
+                  value={form.bloodUrea}
+                  onChange={handleChange}
+                  helperText="Normal: 15 – 45 mg/dL"
+                />
+                <Input
+                  label="Hemoglobin (g/dL)"
+                  type="number"
+                  step="0.1"
+                  name="hemoglobin"
+                  value={form.hemoglobin}
+                  onChange={handleChange}
+                  helperText="Normal: 13.5 – 17.5 g/dL"
+                />
+                <Input
+                  label="Random Blood Sugar (mg/dL)"
+                  type="number"
+                  step="1"
+                  name="bloodGlucoseRandom"
+                  value={form.bloodGlucoseRandom}
+                  onChange={handleChange}
+                  helperText="Normal: < 140 mg/dL"
+                />
+                <Select
+                  label="Urine Albumin (Protein)"
+                  name="albumin"
+                  value={form.albumin}
+                  onChange={handleChange}
+                  options={[
+                    { value: '0', label: '0 (Nil / Normal)' },
+                    { value: '1', label: '1 (Trace / +)' },
+                    { value: '2', label: '2 (++)' },
+                    { value: '3', label: '3 (+++)' },
+                  ]}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lab Mode: Full Detailed Clinical Panels */}
+        {mode === 'LAB' && (
+          <>
+            <Card title="3. Renal & Blood Chemistry Panel" icon={FlaskConical}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <Input
+                  label="Serum Creatinine (mg/dL)"
+                  type="number"
+                  step="0.1"
+                  name="serumCreatinine"
+                  value={form.serumCreatinine}
+                  onChange={handleChange}
+                  helperText="Normal: 0.6 – 1.3 mg/dL"
+                />
+                <Input
+                  label="Blood Urea (mg/dL)"
+                  type="number"
+                  step="0.1"
+                  name="bloodUrea"
+                  value={form.bloodUrea}
+                  onChange={handleChange}
+                  helperText="Normal: 15 – 45 mg/dL"
+                />
+                <Input
+                  label="Hemoglobin (g/dL)"
+                  type="number"
+                  step="0.1"
+                  name="hemoglobin"
+                  value={form.hemoglobin}
+                  onChange={handleChange}
+                  helperText="Normal: 13.5 – 17.5 g/dL"
+                />
+                <Input
+                  label="Random Blood Glucose (mg/dL)"
+                  type="number"
+                  step="1"
+                  name="bloodGlucoseRandom"
+                  value={form.bloodGlucoseRandom}
+                  onChange={handleChange}
+                  helperText="Normal: < 140 mg/dL"
+                />
+                <Input
+                  label="Serum Sodium (mEq/L)"
+                  type="number"
+                  step="0.1"
+                  name="sodium"
+                  value={form.sodium}
+                  onChange={handleChange}
+                  helperText="Normal: 135 – 145 mEq/L"
+                />
+                <Input
+                  label="Serum Potassium (mEq/L)"
+                  type="number"
+                  step="0.1"
+                  name="potassium"
+                  value={form.potassium}
+                  onChange={handleChange}
+                  helperText="Normal: 3.5 – 5.0 mEq/L"
+                />
+                <Input
+                  label="Packed Cell Volume (PCV %)"
+                  type="number"
+                  step="1"
+                  name="packedCellVolume"
+                  value={form.packedCellVolume}
+                  onChange={handleChange}
+                  helperText="Normal: 40 – 50%"
+                />
+                <Input
+                  label="White Blood Cell Count"
+                  type="number"
+                  step="100"
+                  name="whiteBloodCellCount"
+                  value={form.whiteBloodCellCount}
+                  onChange={handleChange}
+                  helperText="Normal: 4,000 – 11,000 /µL"
+                />
+                <Input
+                  label="Red Blood Cell Count (M/µL)"
+                  type="number"
+                  step="0.1"
+                  name="redBloodCellCount"
+                  value={form.redBloodCellCount}
+                  onChange={handleChange}
+                  helperText="Normal: 4.5 – 5.9 M/µL"
+                />
+              </div>
+            </Card>
+
+            <Card title="4. Urinalysis Parameters" icon={Activity}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                <Select
+                  label="Specific Gravity"
+                  name="specificGravity"
+                  value={form.specificGravity}
+                  onChange={handleChange}
+                  options={[
+                    { value: '1.005', label: '1.005' },
+                    { value: '1.010', label: '1.010' },
+                    { value: '1.015', label: '1.015' },
+                    { value: '1.020', label: '1.020' },
+                    { value: '1.025', label: '1.025' },
+                  ]}
+                />
+                <Select
+                  label="Albumin (Proteinuria)"
+                  name="albumin"
+                  value={form.albumin}
+                  onChange={handleChange}
+                  options={[
+                    { value: '0', label: '0 (Nil)' },
+                    { value: '1', label: '1 (Trace / +)' },
+                    { value: '2', label: '2 (++)' },
+                    { value: '3', label: '3 (+++)' },
+                    { value: '4', label: '4 (++++)' },
+                    { value: '5', label: '5 (Severe)' },
+                  ]}
+                />
+                <Select
+                  label="Urine Sugar (Glucosuria)"
+                  name="sugar"
+                  value={form.sugar}
+                  onChange={handleChange}
+                  options={[
+                    { value: '0', label: '0 (Nil)' },
+                    { value: '1', label: '1 (+)' },
+                    { value: '2', label: '2 (++)' },
+                    { value: '3', label: '3 (+++)' },
+                    { value: '4', label: '4 (++++)' },
+                  ]}
+                />
+                <Select
+                  label="Red Blood Cells in Urine"
+                  name="redBloodCells"
+                  value={form.redBloodCells}
+                  onChange={handleChange}
+                  options={[
+                    { value: 'normal', label: 'Normal' },
+                    { value: 'abnormal', label: 'Abnormal' },
+                  ]}
+                />
+                <Select
+                  label="Pus Cells in Urine"
+                  name="pusCell"
+                  value={form.pusCell}
+                  onChange={handleChange}
+                  options={[
+                    { value: 'normal', label: 'Normal' },
+                    { value: 'abnormal', label: 'Abnormal' },
+                  ]}
+                />
+                <Select
+                  label="Pus Cell Clumps"
+                  name="pusCellClumps"
+                  value={form.pusCellClumps}
+                  onChange={handleChange}
+                  options={[
+                    { value: 'notpresent', label: 'Not Present' },
+                    { value: 'present', label: 'Present' },
+                  ]}
+                />
+              </div>
+            </Card>
+          </>
+        )}
+
+        <div className="p-4 rounded-xl bg-slate-100 dark:bg-neutral-800 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-3">
           <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <div>
-            The model computes probability of Chronic Kidney Disease (CKD) risk and automatically runs local TreeSHAP attribution to identify which markers push risk higher or lower.
+            The system computes probability of Chronic Kidney Disease (CKD) risk, generates personalized clinical & lifestyle recommendations, and runs TreeSHAP attribution to reveal which factors influence your score.
           </div>
         </div>
 
@@ -463,7 +593,7 @@ export const Assessment = () => {
             icon={ArrowRight}
             className="w-full sm:w-auto shadow-lg shadow-teal-600/20"
           >
-            Compute Risk & SHAP Explanation
+            {mode === 'HOME' ? 'Calculate My Kidney Risk' : 'Compute Risk & SHAP Explanation'}
           </Button>
         </div>
       </form>

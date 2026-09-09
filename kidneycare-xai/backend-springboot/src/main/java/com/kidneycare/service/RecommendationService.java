@@ -143,10 +143,60 @@ public class RecommendationService {
     }
 
     public List<RecommendationResponse> getRecommendationsByUser(Long userId) {
-        return recommendationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+        List<RecommendationResponse> list = recommendationRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
+        if (list.isEmpty()) {
+            return getDefaultRecommendations();
+        }
+        return list;
+    }
+
+    private List<RecommendationResponse> getDefaultRecommendations() {
+        return List.of(
+                RecommendationResponse.builder()
+                        .id(-1L)
+                        .category("Hydration")
+                        .triggerReason("Baseline Preventive Care")
+                        .recommendation("Adequate daily hydration supports your kidneys in clearing sodium and urea. Aim for 1.5–2.0 liters of water daily.")
+                        .priority("Routine")
+                        .source("European Food Safety Authority & KDIGO")
+                        .build(),
+                RecommendationResponse.builder()
+                        .id(-2L)
+                        .category("Diet")
+                        .triggerReason("Baseline Preventive Care")
+                        .recommendation("Keep daily sodium intake under 2,000 mg (about 1 teaspoon of salt) to regulate blood pressure and protect glomerular filters.")
+                        .priority("Medium")
+                        .source("WHO & American Heart Association")
+                        .build(),
+                RecommendationResponse.builder()
+                        .id(-3L)
+                        .category("Medical")
+                        .triggerReason("Baseline Preventive Care")
+                        .recommendation("Exercise caution with regular over-the-counter NSAID painkillers (e.g. ibuprofen, naproxen), which can reduce renal blood flow.")
+                        .priority("High")
+                        .source("National Kidney Foundation")
+                        .build(),
+                RecommendationResponse.builder()
+                        .id(-4L)
+                        .category("Lifestyle")
+                        .triggerReason("Baseline Preventive Care")
+                        .recommendation("Schedule periodic resting blood pressure checks. Early hypertension is the second leading cause of undetected kidney disease.")
+                        .priority("Medium")
+                        .source("WHO Hypertension Guidelines")
+                        .build(),
+                RecommendationResponse.builder()
+                        .id(-5L)
+                        .category("Exercise")
+                        .triggerReason("Baseline Preventive Care")
+                        .recommendation("Aim for 150 minutes of moderate activity weekly (e.g. brisk walking) to improve vascular elasticity and renal perfusion.")
+                        .priority("Routine")
+                        .source("WHO Physical Activity Guidelines")
+                        .build()
+        );
     }
 
     private Recommendation buildRecommendation(Assessment assessment,

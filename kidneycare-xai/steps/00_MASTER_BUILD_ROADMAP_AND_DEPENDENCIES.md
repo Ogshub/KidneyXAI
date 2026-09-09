@@ -80,6 +80,7 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **39** | `39_UCI_CKD_DATASET_INGESTION_XGBOOST_TRAINING_AND_SHAP_GENERATION.md` | UCI dataset ingestion, 10-fold CV training (98.5% acc, 99.81% AUROC), TreeSHAP artifacts | Step 03, 05, 06, 07 |
 | **40** | `40_PYTHON_ENVIRONMENT_INTERPRETER_ALIGNMENT_AND_LINTER_FIX.md` | Python interpreter configuration, Pyrefly `missing-import` resolution, workspace settings | Step 03, 39 |
 | **41** | `41_PRODUCTION_DEPLOYMENT_RENDER_PIPELINE_AND_VERIFICATION.md` | Cloud deployment pipeline, Render blueprint configuration, dataset & model git sync | Step 30, 39, 40 |
+| **42** | `42_AT_HOME_SCREENING_MODE_RESILIENT_FALLBACK_AND_BASELINE_RECOMMENDATIONS.md` | Dual-mode screener UI, ML service URI normalization & fallback, baseline recommendations | Step 17, 18, 27, 28, 41 |
 
 ---
 
