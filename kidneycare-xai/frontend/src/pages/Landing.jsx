@@ -43,9 +43,9 @@ export const Landing = () => {
                 Start Risk Assessment
               </Button>
             </Link>
-            <Link to="/research-survey">
+            <Link to="/analytics">
               <Button size="lg" variant="secondary" icon={FileSpreadsheet}>
-                Take College Lifestyle Survey (Dataset B)
+                Explore Multi-Cohort Analytics (3,047 Records)
               </Button>
             </Link>
           </div>

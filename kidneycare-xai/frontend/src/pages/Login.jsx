@@ -19,9 +19,7 @@ import {
   Sparkles, 
   CheckCircle2, 
   TrendingUp, 
-  Award,
-  Stethoscope,
-  UserCheck
+  Award
 } from 'lucide-react';
 
 export const Login = () => {
@@ -58,15 +56,6 @@ export const Login = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillDemo = (type) => {
-    if (type === 'shubham') {
-      setFormData({ email: 'mcashubham30@gmail.com', password: 'Shubham' });
-    } else {
-      setFormData({ email: 'alice@kidneycare.org', password: 'SecurePassword123!' });
-    }
-    setError('');
   };
 
   const toggleStyle = () => {
@@ -261,10 +250,10 @@ export const Login = () => {
                   isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'
                 }`}
               >
-                24
+                3,047
               </p>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Biomarkers & Vitals
+                Multi-Cohort Cases
               </p>
             </div>
           </div>
@@ -339,51 +328,6 @@ export const Login = () => {
             >
               Sign in to manage risk assessments, explore TreeSHAP waterfall graphs, and log daily lifestyle habits.
             </p>
-          </div>
-
-          {/* Quick Demo Fill Buttons (Clinician vs Patient) */}
-          <div className="mb-6">
-            <p
-              className={`text-xs font-bold mb-2 flex items-center gap-1.5 ${
-                isBrutalist ? 'uppercase tracking-wider text-[var(--text-main)]' : 'text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5 text-teal-500" />
-              <span>Instant One-Click Demo Logins:</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleFillDemo('alice')}
-                className={`p-2.5 text-left transition-all cursor-pointer ${
-                  isBrutalist
-                    ? 'border-[2px] border-[var(--brutalist-black)] bg-[var(--brutalist-yellow)] text-[var(--brutalist-black)] hover:bg-[var(--brutalist-black)] hover:text-white shadow-[2px_2px_0px_0px_var(--brutalist-black)]'
-                    : 'rounded-xl border border-teal-200 dark:border-teal-800/60 bg-teal-50/70 dark:bg-teal-950/40 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-950 dark:text-teal-200'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Stethoscope className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                  <span className="text-xs font-bold truncate">Dr. Alice (Clinician)</span>
-                </div>
-                <p className="text-[10px] opacity-75 font-mono truncate mt-0.5">alice@kidneycare.org</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleFillDemo('shubham')}
-                className={`p-2.5 text-left transition-all cursor-pointer ${
-                  isBrutalist
-                    ? 'border-[2px] border-[var(--brutalist-black)] bg-[var(--bg-surface)] text-[var(--text-main)] hover:bg-[var(--brutalist-yellow)] hover:text-[var(--brutalist-black)] shadow-[2px_2px_0px_0px_var(--brutalist-black)]'
-                    : 'rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <HeartPulse className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span className="text-xs font-bold truncate">Shubham (Account)</span>
-                </div>
-                <p className="text-[10px] opacity-75 font-mono truncate mt-0.5">mcashubham30@gmail.com</p>
-              </button>
-            </div>
           </div>
 
           {/* Error display */}
