@@ -87,6 +87,7 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **46** | `46_PYREFLY_IMPORT_ALIGNMENT_AND_MULTI_THEME_AUTH_REDESIGN.md` | Pyrefly linter import alignment, Windows multiprocessing stability, and multi-theme authentication redesign | Step 39, 40, 45 |
 | **47** | `47_SPLIT_SCREEN_AUTH_UX_REDESIGN_AND_VISUAL_DENSITY.md` | Full-bleed split-screen authentication UX redesign, live SHAP telemetry visualizer, and dual demo quick-switches | Step 45, 46 |
 | **48** | `48_MULTI_DATASET_EVALUATION_METRICS_AND_DEMO_LOGIN_REMOVAL.md` | Multi-dataset evaluation metrics synthesis across 3,047 records (UCI, PMC, Kaggle) and demo login removal | Step 43, 46, 47 |
+| **49** | `49_RENDER_CLOUD_COLD_START_RESILIENCE_AND_TIMEOUT_OPTIMIZATION.md` | Cloud cold-start resilience, 60s timeout extension, and authentication telemetry notices | Step 47, 48 |
 
 ---
 

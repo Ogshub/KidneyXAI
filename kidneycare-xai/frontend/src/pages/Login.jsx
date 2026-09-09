@@ -33,6 +33,7 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [coldStartNotice, setColdStartNotice] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -43,18 +44,32 @@ export const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setColdStartNotice(false);
+
+    const timer = setTimeout(() => {
+      setColdStartNotice(true);
+    }, 3500);
+
     try {
       await login({ email: formData.email.trim(), password: formData.password });
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Invalid email or password. Please try again.';
+      let msg = 'Invalid email or password. Please check your credentials and try again.';
+      if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
+        msg = 'The cloud server took longer to respond while spinning up from sleep. It is now warm — please click Sign In again!';
+      } else if (!err.response) {
+        msg = 'Network connection issue. The backend cloud instance may be restarting. Please retry in a few moments.';
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error;
+      }
       setError(msg);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
+      setColdStartNotice(false);
     }
   };
 
@@ -431,6 +446,15 @@ export const Login = () => {
                 </>
               )}
             </button>
+            {loading && coldStartNotice && (
+              <p
+                className={`text-xs text-center mt-2.5 animate-pulse ${
+                  isBrutalist ? 'text-[var(--brutalist-yellow)] font-bold' : 'text-amber-600 dark:text-amber-400 font-medium'
+                }`}
+              >
+                Connecting to cloud server... (Free-tier instance may take ~20s on first spin-up)
+              </p>
+            )}
           </form>
 
           {/* Security & Explainability Highlights */}
