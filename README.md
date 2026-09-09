@@ -10,6 +10,14 @@
 [![KDIGO](https://img.shields.io/badge/Clinical%20Guidelines-KDIGO%202024-purple.svg)](https://kdigo.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## 🚀 Live Demo
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-KidneyCare--XAI-brightgreen?style=for-the-badge)](https://kidney-xai.kaifkhan.in)
+
+**Live Application:** https://kidney-xai.kaifkhan.in
+
+The live KidneyCare-XAI application is available for demonstration and academic evaluation.
+
 ---
 
 ## 📌 Project Overview
