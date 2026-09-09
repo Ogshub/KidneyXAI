@@ -84,6 +84,7 @@ When building a full-stack, AI-assisted clinical system, naive developers often 
 | **43** | `43_MULTI_COHORT_DATASET_STANDARDIZATION_BENCHMARKING_AND_MODEL_TRAINING.md` | Multi-cohort datasets (PMC13092092, Kaggle, UCI), data catalog standardization, cross-cohort training | Step 39, 41, 42 |
 | **44** | `44_POSTGRES_VARCHAR_COLUMN_OVERFLOW_FIX_AND_DEFENSIVE_SANITIZATION.md` | PostgreSQL VARCHAR(20) overflow fix, defensive string clamping, and transaction safety | Step 02, 10, 18, 42 |
 | **45** | `45_COMPLETE_END_TO_END_USER_MANUAL_AND_FEATURE_GUIDE.md` | Complete feature walkthrough manual, Dual-Mode assessment guide, and screenshot checklist | Step 01-44 |
+| **46** | `46_PYREFLY_IMPORT_ALIGNMENT_AND_MULTI_THEME_AUTH_REDESIGN.md` | Pyrefly linter import alignment, Windows multiprocessing stability, and multi-theme authentication redesign | Step 39, 40, 45 |
 
 ---
 

@@ -1,0 +1,15 @@
+{
+  "include": [
+    "kidneycare-xai/ml-service"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/target",
+    "kidneycare-xai/ml-service/.venv"
+  ],
+  "venvPath": "kidneycare-xai/ml-service",
+  "venv": ".venv",
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none"
+}

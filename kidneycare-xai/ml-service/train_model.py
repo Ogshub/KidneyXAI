@@ -91,7 +91,7 @@ def load_dataset() -> pd.DataFrame:
     # Source 3: auto-download
     print("[INFO] No local dataset found. Attempting auto-download via ucimlrepo...")
     try:
-        from ucimlrepo import fetch_ucirepo
+        from ucimlrepo import fetch_ucirepo  # type: ignore  # pyrefly: ignore [missing-import]
         ckd = fetch_ucirepo(id=336)
         df = pd.concat([ckd.data.features, ckd.data.targets], axis=1)
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -113,7 +113,7 @@ def load_dataset() -> pd.DataFrame:
 def _load_arff(arff_path: Path) -> pd.DataFrame:
     """Parse ARFF format file into a pandas DataFrame."""
     try:
-        from scipy.io import arff
+        from scipy.io import arff  # type: ignore  # pyrefly: ignore [missing-import]
         data, meta = arff.loadarff(arff_path)
         df = pd.DataFrame(data)
         # Decode bytes to string (ARFF stores strings as bytes)
@@ -246,7 +246,7 @@ def build_pipeline():
     from sklearn.impute import SimpleImputer
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import OrdinalEncoder, StandardScaler
-    from xgboost import XGBClassifier
+    from xgboost import XGBClassifier  # type: ignore  # pyrefly: ignore [missing-import]
 
     # Numerical preprocessing: median imputation + scaling
     num_pipe = Pipeline([
@@ -282,7 +282,7 @@ def build_pipeline():
         use_label_encoder=False,
         eval_metric="logloss",
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,
     )
 
     full_pipeline = Pipeline([
@@ -305,7 +305,7 @@ def evaluate(pipeline, X, y):
 
     print("[INFO] Running 10-fold stratified cross-validation...")
     results = cross_validate(pipeline, X, y, cv=cv, scoring=scoring,
-                              return_train_score=False, n_jobs=-1)
+                              return_train_score=False, n_jobs=1)
 
     metrics = {
         "accuracy":  results["test_accuracy"].mean(),
@@ -360,7 +360,7 @@ def benchmark_cohorts():
     kaggle_path = DATA_DIR / "03_kaggle_ckd_lifestyle_and_clinical_cohort.csv"
     if kaggle_path.exists():
         try:
-            from xgboost import XGBClassifier
+            from xgboost import XGBClassifier  # type: ignore  # pyrefly: ignore [missing-import]
             from sklearn.model_selection import StratifiedKFold, cross_val_score
             df_k = pd.read_csv(kaggle_path)
             feats = [c for c in df_k.columns if c not in ["PatientID", "DoctorInCharge", "Diagnosis"]]
@@ -470,7 +470,7 @@ def main():
     pipeline.fit(X, y)
 
     # 4. Create SHAP explainer using the fitted preprocessor + model
-    import shap
+    import shap  # type: ignore  # pyrefly: ignore [missing-import]
     print("[INFO] Building TreeSHAP explainer...")
     X_transformed = preprocessor.fit_transform(X)
 

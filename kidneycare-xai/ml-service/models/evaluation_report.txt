@@ -4,7 +4,7 @@ Primary Model : XGBoost Classifier (XGBClassifier)
 Version       : v1.0
 Primary Data  : 01_uci_ckd_benchmark_2015.csv (400 records, 24 features)
 Validation    : 10-Fold Stratified Cross-Validation
-Training Date : 2026-09-09 11:40:54
+Training Date : 2026-09-09 13:03:39
 
 Primary Clinical Model Performance Metrics:
   Accuracy    : 0.9850 (98.50%)
@@ -14,16 +14,16 @@ Primary Clinical Model Performance Metrics:
   AUROC       : 0.9981
 
 Top Features by Mean |SHAP| Value:
-   1. hemoglobin                     1.692258
-   2. serum_creatinine               1.067941
-   3. specific_gravity               0.927234
-   4. albumin                        0.531405
-   5. packed_cell_volume             0.432734
-   6. sodium                         0.321840
-   7. age                            0.293035
-   8. blood_glucose_random           0.262099
-   9. red_blood_cell_count           0.184530
-  10. hypertension                   0.146275
+   1. hemoglobin                     1.649345
+   2. serum_creatinine               1.069318
+   3. specific_gravity               0.932931
+   4. albumin                        0.536868
+   5. packed_cell_volume             0.468325
+   6. sodium                         0.328423
+   7. age                            0.293557
+   8. blood_glucose_random           0.259565
+   9. red_blood_cell_count           0.181508
+  10. hypertension                   0.121415
 
 Multi-Cohort Benchmarks & Datasets Inventory:
 --------------------------------------------
