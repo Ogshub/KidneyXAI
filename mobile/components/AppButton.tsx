@@ -1,18 +1,21 @@
 import React from 'react';
-import { TouchableOpacity, ActivityIndicator, StyleSheet, TouchableOpacityProps } from 'react-native';
+import { TouchableOpacity, ActivityIndicator, StyleSheet, TouchableOpacityProps, View } from 'react-native';
 import { AppText } from './AppText';
 import { theme } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface AppButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   loading?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
 export const AppButton = ({
   title,
   variant = 'primary',
   loading = false,
+  icon,
   style,
   disabled,
   ...props
@@ -53,9 +56,14 @@ export const AppButton = ({
       {loading ? (
         <ActivityIndicator color={getTextColor()} />
       ) : (
-        <AppText weight="medium" color={getTextColor()} align="center">
-          {title}
-        </AppText>
+        <View style={styles.content}>
+          {icon && (
+            <Ionicons name={icon} size={20} color={getTextColor()} style={styles.icon} />
+          )}
+          <AppText weight="medium" color={getTextColor()} align="center">
+            {title}
+          </AppText>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -69,4 +77,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
   },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    marginRight: theme.spacing.sm,
+  }
 });
