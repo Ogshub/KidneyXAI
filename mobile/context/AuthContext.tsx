@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { storage } from '../utils/storage';
 import { authApi } from '../services/api';
 
 interface User {
@@ -30,15 +29,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const loadSession = async () => {
       try {
-        let savedToken = null;
-        let savedUserStr = null;
-        if (Platform.OS === 'web') {
-          savedToken = localStorage.getItem('kidneycare_token');
-          savedUserStr = localStorage.getItem('kidneycare_user');
-        } else {
-          savedToken = await SecureStore.getItemAsync('kidneycare_token');
-          savedUserStr = await SecureStore.getItemAsync('kidneycare_user');
-        }
+        const savedToken = await storage.getItem('kidneycare_token');
+        const savedUserStr = await storage.getItem('kidneycare_user');
         
         if (savedToken && savedUserStr) {
           setToken(savedToken);
@@ -65,13 +57,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
     setToken(data.token);
     setUser(userData);
-    if (Platform.OS === 'web') {
-      localStorage.setItem('kidneycare_token', data.token);
-      localStorage.setItem('kidneycare_user', JSON.stringify(userData));
-    } else {
-      await SecureStore.setItemAsync('kidneycare_token', data.token);
-      await SecureStore.setItemAsync('kidneycare_user', JSON.stringify(userData));
-    }
+    await storage.setItem('kidneycare_token', data.token);
+    await storage.setItem('kidneycare_user', JSON.stringify(userData));
   };
 
   const register = async (formData: any) => {
@@ -84,25 +71,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
     setToken(data.token);
     setUser(userData);
-    if (Platform.OS === 'web') {
-      localStorage.setItem('kidneycare_token', data.token);
-      localStorage.setItem('kidneycare_user', JSON.stringify(userData));
-    } else {
-      await SecureStore.setItemAsync('kidneycare_token', data.token);
-      await SecureStore.setItemAsync('kidneycare_user', JSON.stringify(userData));
-    }
+    await storage.setItem('kidneycare_token', data.token);
+    await storage.setItem('kidneycare_user', JSON.stringify(userData));
   };
 
   const logout = async () => {
     setUser(null);
     setToken(null);
-    if (Platform.OS === 'web') {
-      localStorage.removeItem('kidneycare_token');
-      localStorage.removeItem('kidneycare_user');
-    } else {
-      await SecureStore.deleteItemAsync('kidneycare_token').catch(() => {});
-      await SecureStore.deleteItemAsync('kidneycare_user').catch(() => {});
-    }
+    await storage.removeItem('kidneycare_token');
+    await storage.removeItem('kidneycare_user');
   };
 
   return (
