@@ -38,13 +38,99 @@ apiClient.interceptors.response.use(
 
 export const authApi = {
   login: async (credentials: any) => {
-    const res = await apiClient.post('/auth/login', credentials);
-    return res.data;
+    try {
+      const res = await apiClient.post('/auth/login', credentials);
+      return res.data;
+    } catch (error: any) {
+      console.error(`Login Error [POST ${API_BASE_URL}/auth/login]:`, {
+        status: error.response?.status,
+        message: error.response?.data?.message || error.message
+      });
+      throw error;
+    }
   },
   register: async (data: any) => {
     const res = await apiClient.post('/auth/register', data);
     return res.data;
   },
+};
+
+export const dashboardApi = {
+  getDashboard: async () => {
+    const res = await apiClient.get('/dashboard');
+    return res.data;
+  },
+};
+
+export const assessmentApi = {
+  createAssessment: async (data: any) => {
+    const res = await apiClient.post('/assessments', data);
+    return res.data;
+  },
+  getAssessments: async () => {
+    const res = await apiClient.get('/assessments');
+    return res.data;
+  },
+  getAssessmentById: async (id: string) => {
+    const res = await apiClient.get(`/assessments/${id}`);
+    return res.data;
+  },
+  getModelEvaluation: async () => {
+    const res = await apiClient.get('/assessments/model-evaluation');
+    return res.data;
+  }
+};
+
+export const profileApi = {
+  getProfile: async () => {
+    const res = await apiClient.get('/profile');
+    return res.data;
+  },
+  updateProfile: async (data: any) => {
+    const res = await apiClient.put('/profile', data);
+    return res.data;
+  },
+  getHealthProfile: async () => {
+    const res = await apiClient.get('/health-profile');
+    return res.data;
+  },
+  updateHealthProfile: async (data: any) => {
+    const res = await apiClient.put('/health-profile', data);
+    return res.data;
+  }
+};
+
+export const activityApi = {
+  logActivity: async (data: any) => {
+    const res = await apiClient.post('/activities', data);
+    return res.data;
+  },
+  getActivities: async (from?: string, to?: string) => {
+    const params: any = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const res = await apiClient.get('/activities', { params });
+    return res.data;
+  }
+};
+
+export const recommendationApi = {
+  getRecommendations: async (assessmentId?: string) => {
+    const params = assessmentId ? { assessmentId } : {};
+    const res = await apiClient.get('/recommendations', { params });
+    return res.data;
+  }
+};
+
+export const researchApi = {
+  submitSurvey: async (data: any) => {
+    const res = await apiClient.post('/research/responses', data);
+    return res.data;
+  },
+  getAnalytics: async () => {
+    const res = await apiClient.get('/research/analytics');
+    return res.data;
+  }
 };
 
 export default apiClient;
