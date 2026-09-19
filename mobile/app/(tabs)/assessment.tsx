@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen, AppText, Card, Input, AppButton, Select, ErrorView } from '../../components';
+import { Screen, AppText, Card, Input, AppButton, Select } from '../../components';
 import { theme } from '../../constants/theme';
 import { assessmentApi } from '../../services/api';
 
@@ -35,6 +36,7 @@ const initialForm = {
 
 export default function AssessmentScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -45,12 +47,11 @@ export default function AssessmentScreen() {
   const totalSteps = mode === 'LAB' ? 4 : 2; 
   // HOME: 1: Demographics, 2: Symptoms & Review
   // LAB: 1: Demographics, 2: Symptoms, 3: Chemistry, 4: Urinalysis & Review
+  const isLastStep = step > 0 && step === totalSteps;
 
   const handleNext = () => {
     if (step < totalSteps) {
       setStep(step + 1);
-    } else {
-      handleSubmit();
     }
   };
 
@@ -290,11 +291,24 @@ export default function AssessmentScreen() {
     return null;
   };
 
+  const tabBarClearance = 72;
+  const scrollBottomPad = tabBarClearance + Math.max(insets.bottom, 16) + theme.spacing.xl;
+
   return (
-    <Screen safeArea scrollable>
+    <Screen safeArea scrollable={false} padded={false} edges={['top']}>
       {renderProgressBar()}
-      
-      <View style={styles.content}>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: scrollBottomPad }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+        nestedScrollEnabled
+        removeClippedSubviews={false}
+        keyboardDismissMode="on-drag"
+        overScrollMode="always"
+        bounces
+      >
         {error ? (
           <View style={styles.errorContainer}>
             <AppText color={theme.colors.error} size="sm">{error}</AppText>
@@ -302,21 +316,22 @@ export default function AssessmentScreen() {
         ) : null}
 
         {renderCurrentStep()}
-        
-        {step > 0 && (
-          <View style={styles.footer}>
+
+        {step > 0 ? (
+          <View style={styles.footer} collapsable={false}>
+            <AppButton
+              title={isLastStep ? 'Submit Assessment' : 'Next Step'}
+              onPress={isLastStep ? handleSubmit : handleNext}
+              loading={isLastStep ? loading : false}
+              icon={isLastStep ? 'checkmark-circle' : 'arrow-forward'}
+              style={styles.actionButton}
+            />
             <AppText size="xs" color={theme.colors.textLight} style={styles.disclaimer}>
               By proceeding, you consent to risk analysis using our decision-support engine.
             </AppText>
-            <AppButton 
-              title={step === totalSteps ? (mode === 'HOME' ? 'Calculate Risk' : 'Compute Risk & SHAP') : 'Next Step'} 
-              onPress={handleNext}
-              loading={loading}
-              icon={step === totalSteps ? 'sparkles' : 'arrow-forward'}
-            />
           </View>
-        )}
-      </View>
+        ) : null}
+      </ScrollView>
     </Screen>
   );
 }
@@ -350,9 +365,13 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: theme.colors.primary,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
-    padding: theme.spacing.lg,
-    paddingBottom: 100,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    flexGrow: 0,
   },
   modeContainer: {
     paddingTop: theme.spacing.xl,
@@ -393,11 +412,17 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
   },
   footer: {
-    marginTop: theme.spacing.xl,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  actionButton: {
+    minHeight: 52,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   disclaimer: {
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginTop: theme.spacing.md,
   },
   errorContainer: {
     padding: theme.spacing.md,
