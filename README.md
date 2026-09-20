@@ -16,6 +16,10 @@
 
 **Live Application:** https://kidney-xai.kaifkhan.in
 
+## 📱 Mobile App
+
+[⬇️ Download KidneyXAI Android APK](https://github.com/Ogshub/KidneyXAI/releases/latest/download/kidney-XAI.apk)
+
 The live KidneyCare-XAI application is available for demonstration and academic evaluation.
 
 ---
