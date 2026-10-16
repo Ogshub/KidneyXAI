@@ -23,13 +23,19 @@ services:
     autoDeploy: true
     envVars:
       - key: DB_URL
-        sync: false
+        value: jdbc:postgresql://aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0
       - key: DB_USERNAME
-        sync: false
+        value: postgres.vavlhunhushdnaqdjyjy
       - key: DB_PASSWORD
-        sync: false
+        value: Kidneyprojectmca1
       - key: JWT_SECRET
-        sync: false
+        value: XGg7sWWYpmxIatIpSOtXNsI3fytG8O2UgYpxRRlLdR8=
+      - key: SUPABASE_URL
+        value: https://vavlhunhushdnaqdjyjy.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: sb_publishable_7TnIoZFm1vzC59_x_BQexA_cFBGLm2v
+      - key: CLOUDINARY_CLOUD_NAME
+        value: mkvwiqlw
       - key: DB_POOL_SIZE
         value: "3"
       - key: HIBERNATE_DDL_AUTO

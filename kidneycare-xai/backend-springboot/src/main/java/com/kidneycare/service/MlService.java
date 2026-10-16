@@ -2,7 +2,6 @@ package com.kidneycare.service;
 
 import com.kidneycare.dto.request.AssessmentRequest;
 import com.kidneycare.dto.response.MlPredictionResponse;
-import com.kidneycare.exception.MlServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
