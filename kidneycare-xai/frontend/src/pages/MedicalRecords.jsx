@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, LinearScale, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { Alert, Button, Card, Input, Select } from '../components/common';
 import { labApi, reportsApi } from '../api/medicalRecords';
+import { AssistantAction } from '../components/assistant/assistantContext';
 import './medicalRecords.css';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
@@ -52,9 +53,9 @@ function RecordsHeader({ title }) {
   return (
     <header className="space-y-3">
       <h1 className="text-3xl font-bold">{title}</h1>
-      <nav aria-label="Medical records" className="flex flex-wrap gap-4">
-        <Link to="/reports">Medical reports</Link>
-        <Link to="/lab-history">Laboratory history</Link>
+      <nav aria-label="Medical records" className="flex flex-wrap gap-4 underline underline-offset-4">
+        <Link to="/reports">Medical records</Link>
+        <Link to="/lab-history">Health trends</Link>
         <Link to="/report-comparison">Compare reports</Link>
       </nav>
     </header>
@@ -86,44 +87,63 @@ function ReportForm({ report, onSave, allowFile }) {
       <label className="medical-wide">Notes
         <textarea name="notes" rows={3} value={form.notes} onChange={change} maxLength={8000} />
       </label>
-      {allowFile && <label className="medical-wide">Attachment (PDF, PNG or JPEG, up to 10 MB)
+      {allowFile && <label className="medical-wide">Optional attachment (PDF, PNG or JPEG, up to 10 MB)
         <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => setFile(event.target.files[0])} />
       </label>}
-      <div className="medical-wide"><Button type="submit" disabled={busy}>{report ? 'Save report details' : 'Create report'}</Button></div>
+      <div className="medical-wide"><Button type="submit" loading={busy}>{busy ? 'Saving report…' : report ? 'Save report details' : 'Create report'}</Button></div>
     </form>
   );
 }
 
 export function MedicalReports() {
-  const [page, setPage] = useState(0);
-  const reports = useResource(reportsApi.list, page);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [from, setFrom] = useState('');
+  const [sort, setSort] = useState('newest');
+  const reports = useResource(allReports, null);
   const navigate = useNavigate();
+  const adding = searchParams.get('add') === '1';
+  const matching = (reports.value ?? []).filter((item) =>
+    (!category || item.reportType === category) && (!from || item.reportDate >= from)
+    && [item.reportType, item.labName, item.fileName].some((value) => value?.toLowerCase().includes(search.trim().toLowerCase())))
+    .sort((a, b) => sort === 'newest' ? b.reportDate.localeCompare(a.reportDate) : a.reportDate.localeCompare(b.reportDate));
   return (
     <div className="medical-page">
-      <RecordsHeader title="Medical reports" />
-      <Card>
+      <RecordsHeader title="Medical Records" />
+      <div className="medical-actions">
+        <Button aria-expanded={adding} aria-controls="add-medical-report" onClick={() => setSearchParams(adding ? {} : { add: '1' })}>{adding ? 'Cancel adding report' : 'Add report'}</Button>
+        <AssistantAction question="Show my latest medical report">Ask about your latest report</AssistantAction>
+      </div>
+      {adding && <Card id="add-medical-report">
         <h2 className="medical-heading">Add a report</h2>
+        <p className="mb-4">Save the report details and enter laboratory measurements manually. Attaching the original file is optional.</p>
         <ReportForm allowFile onSave={async (report, file) => {
           const saved = await reportsApi.create(report, file);
           navigate(`/reports/${saved.id}`);
         }} />
-      </Card>
+      </Card>}
       <Card>
         <h2 className="medical-heading">Your reports</h2>
         <Status error={reports.error}>
-          {reports.value && (reports.value.content.length ? (
-            <ul className="medical-list">
-              {reports.value.content.map((item) => <li key={item.id}>
-                <Link to={`/reports/${item.id}`}>{item.reportDate} · {item.reportType}{item.labName && ` · ${item.labName}`}</Link>
-                {item.fileName && <span>{item.fileName}</span>}
+          {reports.value && (reports.value.length ? <>
+            <div className="medical-fields mb-4">
+              <Input name="report-search" label="Search reports" type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+              <Select name="report-category" label="Category" value={category} onChange={(event) => setCategory(event.target.value)}
+                options={[{ value: '', label: 'All categories' }, ...selectOptions(types)]} />
+              <Input name="report-from" label="Dated on or after" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+              <Select name="report-sort" label="Sort by date" value={sort} onChange={(event) => setSort(event.target.value)}
+                options={[{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }]} />
+            </div>
+            {matching.length ? <ul className="medical-list">
+              {matching.map((item) => <li key={item.id}>
+                <Link className="underline" to={`/reports/${item.id}`}>{item.reportDate} · {item.reportType}{item.labName && ` · ${item.labName}`}</Link>
+                <span>{item.fileName ? 'Attachment available' : 'No attachment'}</span>
+                <Link className="underline" to={`/report-comparison?a=${item.id}`}>Compare</Link>
               </li>)}
-            </ul>
-          ) : <p>No reports on this page.</p>)}
+            </ul> : <p>No reports match these filters.</p>}
+          </> : <p>No records yet. Add a report to keep its details, optional attachment and manually recorded measurements together.</p>)}
         </Status>
-        {reports.value && <div className="medical-actions mt-4">
-          <Button variant="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-          <Button variant="secondary" disabled={reports.value.last} onClick={() => setPage(page + 1)}>Next</Button>
-        </div>}
       </Card>
     </div>
   );
@@ -283,25 +303,42 @@ export function ReportDetails() {
     <Status error={report.error || parameters.error}>
       {report.value && parameters.value ? <ReportContent key={id} initial={report.value} parameters={parameters.value} /> : null}
     </Status>
+    {report.value && <div className="medical-actions">
+      <Link className="assistant-action" to={`/report-comparison?a=${id}`}>Compare with another report</Link>
+      <Link className="assistant-action" to={`/assessment?fromReport=${id}`}>Review values for assessment</Link>
+      <AssistantAction question="Explain this medical report">Explain this report</AssistantAction>
+    </div>}
   </div>;
 }
 
-function HistoryContent({ parameters }) {
+function HistoryContent({ parameters, compact }) {
   const [parameter, setParameter] = useState(parameters[0].name);
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
   const history = useResource(labApi.history, parameter);
   const selected = parameters.find(({ name }) => name === parameter);
-  const rows = history.value ?? [];
-  return <Card>
-    <Select id="history-parameter" label="Laboratory parameter" value={parameter} onChange={(event) => setParameter(event.target.value)}
-      options={parameters.map(({ name, label }) => ({ value: name, label }))} />
-    <p className="my-4">Trends show recorded results. Discuss clinical interpretation with a qualified clinician.</p>
+  const rows = (history.value ?? []).filter((item) => (!start || item.recordedAt >= start) && (!end || item.recordedAt <= end))
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt));
+  const plotted = rows.filter((item) => item.normalizedUnit === selected.canonicalUnit && item.normalizedValue != null);
+  const conflicts = plotted.some((item, index) => index > 0 && plotted[index - 1].recordedAt === item.recordedAt && plotted[index - 1].normalizedValue !== item.normalizedValue);
+  return <div className="space-y-4">
+    <div className="medical-fields">
+      <Select id="history-parameter" label="Laboratory parameter" value={parameter} onChange={(event) => setParameter(event.target.value)}
+        options={parameters.map(({ name, label }) => ({ value: name, label }))} />
+      {!compact && <>
+        <Input name="trend-start" label="From" type="date" value={start} max={end || today()} onChange={(event) => setStart(event.target.value)} />
+        <Input name="trend-end" label="To" type="date" value={end} min={start} max={today()} onChange={(event) => setEnd(event.target.value)} />
+      </>}
+    </div>
+    {!compact && <AssistantAction question={`Show my ${parameter.replaceAll('_', ' ')} history`}>Explain recorded measurements</AssistantAction>}
     <Status error={history.error}>
       {history.value && (rows.length ? <>
-        <div className="medical-chart">
+        {plotted.length >= 2 ? <div className="medical-chart">
           <Line aria-label={`${selected.label} over time in ${selected.canonicalUnit}`} role="img" data={{
             datasets: [{
               label: `${selected.label} (${selected.canonicalUnit})`,
-              data: rows.map(({ recordedAt, normalizedValue }) => ({ x: Date.parse(recordedAt), y: normalizedValue })),
+              showLine: !conflicts,
+              data: plotted.map(({ recordedAt, normalizedValue }) => ({ x: Date.parse(recordedAt), y: normalizedValue })),
               borderColor: '#0d9488',
               backgroundColor: '#14b8a6',
             }],
@@ -309,24 +346,41 @@ function HistoryContent({ parameters }) {
             responsive: true,
             maintainAspectRatio: false,
             scales: { x: { type: 'linear', ticks: { callback: (time) => new Date(time).toISOString().slice(0, 10) } } },
-            plugins: { tooltip: { callbacks: { title: (points) => new Date(points[0].parsed.x).toISOString().slice(0, 10) } } },
+            plugins: { tooltip: { callbacks: {
+              title: (points) => plotted[points[0].dataIndex].recordedAt,
+              label: (point) => {
+                const item = plotted[point.dataIndex];
+                return [
+                  `${item.value} ${item.unit} · Report #${item.reportId}`,
+                  item.transcriptionConfirmed ? 'Confirmed by user' : 'Not confirmed',
+                ];
+              },
+            } } },
           }} />
-        </div>
-        <ul className="medical-list">{rows.map((item) => <li key={item.id}>
-          <Link to={`/reports/${item.reportId}`}>{item.recordedAt}</Link>
+        </div> : <p>{plotted.length === 1 ? 'One compatible measurement is recorded.' : 'No measurements use compatible units for this chart.'}</p>}
+        {conflicts && <p>Different values share a date. Review the listed source reports.</p>}
+        {plotted.length > 0 && plotted.length < rows.length && <p>Measurements with incompatible units are listed below.</p>}
+        <ul aria-label="Recorded measurements" className="medical-list">{(compact ? rows.slice(-3) : rows).map((item) => <li key={item.id}>
+          <Link className="underline" to={`/reports/${item.reportId}`}>{item.recordedAt}</Link>
           <span>{item.value} {item.unit} · {item.source}</span>
           <span>{item.transcriptionConfirmed ? 'User-confirmed transcription' : 'Unconfirmed transcription'}</span>
         </li>)}</ul>
       </> : <p>No measurements for this parameter.</p>)}
     </Status>
-  </Card>;
+  </div>;
+}
+
+export function LaboratoryTrend({ compact = false }) {
+  const parameters = useResource(labApi.parameters, null);
+  return <Status error={parameters.error}>{parameters.value && (parameters.value.length
+    ? <HistoryContent compact={compact} parameters={parameters.value} />
+    : <p>No laboratory parameters are available.</p>)}</Status>;
 }
 
 export function LabHistory() {
-  const parameters = useResource(labApi.parameters, null);
   return <div className="medical-page">
-    <RecordsHeader title="Laboratory history" />
-    <Status error={parameters.error}>{parameters.value && <HistoryContent parameters={parameters.value} />}</Status>
+    <RecordsHeader title="Health Trends" />
+    <Card title="Laboratory history" subtitle="Review recorded values by measurement date and source report."><LaboratoryTrend /></Card>
   </div>;
 }
 
@@ -341,14 +395,19 @@ async function allReports() {
 }
 
 function ComparisonContent({ reports }) {
-  const [a, setA] = useState('');
+  const [searchParams] = useSearchParams();
+  const [a, setA] = useState(() => reports.some((item) => String(item.id) === searchParams.get('a')) ? searchParams.get('a') : '');
   const [b, setB] = useState('');
   const [comparison, setComparison] = useState(null);
   const { run, busy, error } = useAction();
   const choices = [{ value: '', label: 'Choose a report' }, ...reports.map((item) => ({
     value: String(item.id), label: `${item.reportDate} · ${item.labName || item.reportType} (#${item.id})`,
   }))];
-  const format = (item) => item ? `${item.value} ${item.unit} · ${item.recordedAt}` : '—';
+  const format = (item) => item ? <div>
+    <p>{item.value} {item.unit} · {item.recordedAt}</p>
+    {item.normalizedUnit && item.unit !== item.normalizedUnit && <p>Converted · {item.normalizedValue} {item.normalizedUnit}</p>}
+    <p>{item.transcriptionConfirmed ? 'Confirmed by user' : 'Not confirmed'}</p>
+  </div> : 'Not recorded';
   return <Card>
     <form className="medical-fields" onSubmit={(event) => {
       event.preventDefault();
@@ -360,12 +419,13 @@ function ComparisonContent({ reports }) {
       <div><Button type="submit" disabled={!a || !b || a === b || busy}>Compare selected reports</Button></div>
     </form>
     {error && <Status error={error} />}
+    {comparison && <div className="mt-4"><AssistantAction question={`Compare medical reports #${comparison.first.id} and #${comparison.second.id}`}>Ask about the recorded differences</AssistantAction></div>}
     {comparison && (comparison.rows.length ? <div className="overflow-x-auto mt-4">
       <table className="medical-table">
         <thead><tr><th>Parameter</th><th>{comparison.first.reportDate}</th><th>{comparison.second.reportDate}</th><th>Change (second − first)</th></tr></thead>
         <tbody>{comparison.rows.map((row) => <tr key={row.parameter}>
           <th scope="row">{row.parameter.replaceAll('_', ' ')}</th><td>{format(row.first)}</td><td>{format(row.second)}</td>
-          <td>{row.delta == null ? '—' : `${row.delta} ${row.second.normalizedUnit}`}</td>
+          <td>{row.delta == null ? 'Unavailable' : `${row.delta} ${row.second.normalizedUnit}`}</td>
         </tr>)}</tbody>
       </table>
     </div> : <p className="mt-4">Neither report has laboratory measurements.</p>)}

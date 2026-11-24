@@ -14,6 +14,10 @@ class ProviderUnavailable(Exception):
     pass
 
 
+class ProviderRateLimited(ProviderUnavailable):
+    pass
+
+
 class Selection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     evidence_id: str | None
@@ -72,13 +76,24 @@ class GeminiProvider:
         except ValueError:
             raise ProviderUnavailable() from None
 
-    async def _generate(self, data, instruction, schema):
+    async def structured_turn(self, data, instruction, contract):
+        raw, version, tokens = await self._generate(
+            data, instruction, contract.model_json_schema(), structured=True)
+        try:
+            return contract.model_validate_json(raw), version, tokens
+        except ValueError:
+            raise ProviderUnavailable() from None
+
+    async def _generate(self, data, instruction, schema, *, structured=False):
         import json
+        format_config = (
+            {"responseFormat": {"text": {"mimeType": "APPLICATION_JSON", "schema": schema}}}
+            if structured else {"responseMimeType": "application/json", "responseSchema": schema}
+        )
         body = {
             "systemInstruction": {"parts": [{"text": instruction}]},
             "contents": [{"parts": [{"text": json.dumps(data)}]}],
-            "generationConfig": {"temperature": 0, "maxOutputTokens": 256, "responseMimeType": "application/json",
-                                 "responseSchema": schema},
+            "generationConfig": {"temperature": 0, "maxOutputTokens": 1024 if structured else 256, **format_config},
         }
         async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             for attempt in range(2):
@@ -91,13 +106,22 @@ class GeminiProvider:
                     tokens = data.get("usageMetadata", {}).get("totalTokenCount")
                     if isinstance(tokens, int):
                         logger.info("Assistant provider token count: %d", tokens)
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                    parts = data["candidates"][0]["content"]["parts"]
+                    raw = "".join(part["text"] for part in parts if not part.get("thought"))
+                    if structured:
+                        version = data.get("modelVersion", self.model)
+                        if not isinstance(version, str) or not re.fullmatch(r"[a-zA-Z0-9._-]{1,120}", version):
+                            raise ProviderUnavailable()
+                        return raw, version, tokens if isinstance(tokens, int) and tokens >= 0 else None
+                    return raw
                 except (httpx.TimeoutException, httpx.NetworkError):
                     if attempt == 0:
                         await asyncio.sleep(0.1)
                         continue
                 except httpx.HTTPStatusError as error:
-                    if attempt == 0 and error.response.status_code in {429, 502, 503, 504}:
+                    if error.response.status_code == 429:
+                        raise ProviderRateLimited() from None
+                    if attempt == 0 and error.response.status_code in {502, 503, 504}:
                         await asyncio.sleep(0.1)
                         continue
                 except (KeyError, IndexError, TypeError, ValueError):

@@ -197,7 +197,8 @@ public class AssessmentService {
                 .prediction(assessment.getPrediction())
                 .modelVersion(assessment.getModelVersion())
                 .isDemoMode(isLegacyOrFallback)
-                .explanationStatus(isLegacyOrFallback ? "legacy_unverified" : "available")
+                // Historical rows do not persist the explanation verification status.
+                .explanationStatus("legacy_unverified")
                 .createdAt(assessment.getCreatedAt())
                 .explanations(explanations)
                 .build();

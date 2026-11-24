@@ -48,8 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String email;
+        String accountId;
         try {
             email = jwtService.authenticatedEmail(authHeader.substring(7));
+            accountId = jwtService.extractClaim(authHeader.substring(7), claims -> claims.get("uid", String.class));
         } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
             request.setAttribute(INVALID_SESSION, true);
             filterChain.doFilter(request, response);
@@ -58,7 +60,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             var userEntity = userRepository.findByEmail(email);
-            if (userEntity.isPresent()) {
+            if (userEntity.isPresent() && userEntity.get().getId().toString().equals(accountId)) {
                 UserDetails userDetails = User.builder()
                         .username(email)
                         .password(userEntity.get().getPasswordHash())

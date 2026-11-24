@@ -3,21 +3,13 @@ import { researchApi, assessmentApi } from '../api';
 import { useTheme } from '../context/ThemeContext';
 import {
   BarChart3,
-  Sparkles,
   CheckCircle2,
-  Users,
-  ShieldCheck,
-  TrendingUp,
   RefreshCw,
-  FileText,
   Activity,
   HelpCircle,
   Award,
   Database,
-  Layers,
-  HeartPulse,
   ExternalLink,
-  BookOpen
 } from 'lucide-react';
 import { Card, Button, Badge, Spinner, Alert } from '../components/common';
 import { ShapBarChart } from '../components/charts';
@@ -40,8 +32,11 @@ export const ResearchAnalytics = () => {
         researchApi.getAnalytics(),
         assessmentApi.getModelEvaluation(),
       ]);
-      setAnalytics(analyticsData);
-      setModelEval(evalData);
+      setAnalytics(analyticsData.status === 'fulfilled' ? analyticsData.value : null);
+      setModelEval(evalData.status === 'fulfilled' ? evalData.value : null);
+      if (analyticsData.status === 'rejected' || evalData.status === 'rejected') {
+        setError('Some research results could not be loaded.');
+      }
     } catch (err) {
       console.error('Failed to load evaluation analytics:', err);
       setError('Could not retrieve research analytics from server.');
@@ -73,7 +68,7 @@ export const ResearchAnalytics = () => {
     {
       id: '01_uci',
       title: '01. UCI / Apollo Hospitals Benchmark',
-      badge: 'Active Production Model',
+      badge: 'Research classifier',
       badgeColor: 'teal',
       records: 400,
       features: 24,
@@ -83,12 +78,12 @@ export const ResearchAnalytics = () => {
       source: 'UCI Machine Learning Repository',
       sourceUrl: 'https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease',
       scope: 'Laboratory blood chemistry, urinalysis parameters, and cardiovascular vitals (10-fold Stratified CV).',
-      status: modelEval?.status === 'available' ? 'Verified Artifact' : 'Evaluating',
+      status: modelEval?.status === 'available' ? 'Verified artifact' : 'Metrics unavailable',
     },
     {
       id: '02_kaggle',
       title: '02. Kaggle Lifestyle & Clinical Cohort',
-      badge: 'Secondary Lifestyle Screener',
+      badge: 'Separate candidate cohort',
       badgeColor: 'blue',
       records: 1659,
       features: 54,
@@ -112,7 +107,7 @@ export const ResearchAnalytics = () => {
       f1Score: 'Hospital Panel',
       source: 'PubMed Central (PMC13092092)',
       sourceUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC13092092/',
-      scope: 'Institutional ethical permission verified hospital patient cohort with blood urea & creatinine.',
+      scope: 'Hospital cohort with blood urea and creatinine. External validation results are unavailable.',
       status: 'Observational Baseline',
     },
   ];

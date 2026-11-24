@@ -8,7 +8,7 @@ Changes from Phase 1:
     all metrics are Optional and sourced from evaluation_report.json
 """
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 
 
 # ── Request ──────────────────────────────────────────────
@@ -23,10 +23,10 @@ class PredictionRequest(BaseModel):
     specific_gravity: Optional[float] = Field(None, alias="specificGravity", ge=1.0, le=1.030)
     albumin: Optional[float] = Field(None, ge=0, le=5)
     sugar: Optional[float] = Field(None, ge=0, le=5)
-    red_blood_cells: Optional[str] = Field(None, alias="redBloodCells")
-    pus_cell: Optional[str] = Field(None, alias="pusCell")
-    pus_cell_clumps: Optional[str] = Field(None, alias="pusCellClumps")
-    bacteria: Optional[str] = Field(None)
+    red_blood_cells: Optional[Literal["normal", "abnormal"]] = Field(None, alias="redBloodCells")
+    pus_cell: Optional[Literal["normal", "abnormal"]] = Field(None, alias="pusCell")
+    pus_cell_clumps: Optional[Literal["present", "notpresent"]] = Field(None, alias="pusCellClumps")
+    bacteria: Optional[Literal["present", "notpresent"]] = Field(None)
     blood_glucose_random: Optional[float] = Field(None, alias="bloodGlucoseRandom", ge=0)
     blood_urea: Optional[float] = Field(None, alias="bloodUrea", ge=0)
     serum_creatinine: Optional[float] = Field(None, alias="serumCreatinine", ge=0)
@@ -36,12 +36,12 @@ class PredictionRequest(BaseModel):
     packed_cell_volume: Optional[float] = Field(None, alias="packedCellVolume", ge=0)
     white_blood_cell_count: Optional[float] = Field(None, alias="whiteBloodCellCount", ge=0)
     red_blood_cell_count: Optional[float] = Field(None, alias="redBloodCellCount", ge=0)
-    hypertension: Optional[str] = Field(None)
-    diabetes_mellitus: Optional[str] = Field(None, alias="diabetesMellitus")
-    coronary_artery_disease: Optional[str] = Field(None, alias="coronaryArteryDisease")
-    appetite: Optional[str] = Field(None)
-    pedal_edema: Optional[str] = Field(None, alias="pedalEdema")
-    anemia: Optional[str] = Field(None)
+    hypertension: Optional[Literal["yes", "no"]] = Field(None)
+    diabetes_mellitus: Optional[Literal["yes", "no"]] = Field(None, alias="diabetesMellitus")
+    coronary_artery_disease: Optional[Literal["yes", "no"]] = Field(None, alias="coronaryArteryDisease")
+    appetite: Optional[Literal["good", "poor"]] = Field(None)
+    pedal_edema: Optional[Literal["yes", "no"]] = Field(None, alias="pedalEdema")
+    anemia: Optional[Literal["yes", "no"]] = Field(None)
 
     class Config:
         populate_by_name = True

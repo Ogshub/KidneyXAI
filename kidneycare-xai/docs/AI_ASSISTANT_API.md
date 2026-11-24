@@ -1,5 +1,13 @@
 # AI assistant API
 
+## Phase 6 contract additions
+
+Chat optionally accepts `pageContext` with `page`, `reportId` and `assessmentId`. Spring validates supplied record references against the authenticated account before executing context tools. The response adds `providerMode`, `corpusVersion` and `validationReasonCodes`. The floating assistant uses these fields and the existing conversation APIs.
+
+Conversational research requires `ASSISTANT_CONVERSATIONAL_RESEARCH=enabled` on both services and an explicit `ASSISTANT_SYNTHETIC_ACCOUNTS` email allowlist on Spring. Configure an authorized Gemini key and model server-side. Only allowlisted synthetic accounts may transfer questions and minimum structured context to this mode. The default bounded workflow retains its existing privacy boundary.
+
+Internal `/internal/assistant/conversational/plan` and `/internal/assistant/conversational/respond` endpoints require the internal secret and the research gate. A structured plan selects an allowlisted read-only tool. Spring executes the authorized lookup. Generated factual sentences must exactly match the supplied deterministic facts or retrieved evidence, including values, dates and units. This deliberately limits phrasing and does not establish clinical accuracy or semantic relevance. Live provider behavior remains pending verification.
+
 ## Application routes
 
 All routes require the current application's JWT. Ownership is derived from the authenticated identity. Foreign conversations return 404.

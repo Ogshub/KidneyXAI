@@ -275,12 +275,12 @@ export const Profile = () => {
         <h1 className={`text-3xl font-extrabold tracking-tight ${
           isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-slate-100'
         }`}>
-          Profile & Medical History
+          Health Profile
         </h1>
         <p className={`text-sm mt-1 ${
           isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-400'
         }`}>
-          Manage your personal identity, profile picture, body metrics, and clinical history.
+          Manage your account details and optional self-reported health information.
         </p>
       </div>
 

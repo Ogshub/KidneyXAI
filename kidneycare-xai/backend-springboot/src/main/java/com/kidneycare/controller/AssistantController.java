@@ -1,6 +1,7 @@
 package com.kidneycare.controller;
 
 import com.kidneycare.dto.response.AssistantResponse;
+import com.kidneycare.dto.request.AssistantPageContext;
 import com.kidneycare.service.AssistantService;
 import com.kidneycare.service.ConversationService;
 import jakarta.validation.Valid;
@@ -18,13 +19,14 @@ import java.util.UUID;
 @RequestMapping("/api/assistant")
 @RequiredArgsConstructor
 public class AssistantController {
-    public record ChatRequest(UUID conversationId, @NotBlank @Size(max = 1000) String message) {}
+    public record ChatRequest(UUID conversationId, @NotBlank @Size(max = 1000) String message,
+                              @Valid AssistantPageContext pageContext) {}
     private final AssistantService assistant;
     private final ConversationService conversations;
 
     @PostMapping("/chat")
     public AssistantResponse chat(Authentication auth, @Valid @RequestBody ChatRequest request) {
-        return assistant.chat(auth.getName(), request.conversationId(), request.message().strip());
+        return assistant.chat(auth.getName(), request.conversationId(), request.message().strip(), request.pageContext());
     }
 
     @GetMapping("/conversations")

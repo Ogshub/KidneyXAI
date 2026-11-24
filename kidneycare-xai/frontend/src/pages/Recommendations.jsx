@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { AssistantAction } from '../components/assistant/assistantContext';
 import { recommendationApi } from '../api';
 import { 
   Sparkles, 
   HelpCircle, 
   CheckCircle2, 
   Filter, 
-  AlertCircle,
   Clock,
   ShieldCheck,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { Card, Badge, Button, Spinner, Alert } from '../components/common';
+import { Card, Badge, Spinner, Alert } from '../components/common';
 
 export const Recommendations = () => {
   const [recommendations, setRecommendations] = useState([]);
@@ -36,7 +36,7 @@ export const Recommendations = () => {
     fetchRecs();
   }, []);
 
-  const categories = ['ALL', 'HYDRATION', 'DIET', 'EXERCISE', 'MEDICAL', 'LIFESTYLE'];
+  const categories = ['ALL', ...new Set(recommendations.map((item) => item.category?.toUpperCase()).filter(Boolean))];
 
   const filtered = categoryFilter === 'ALL'
     ? recommendations
@@ -58,12 +58,14 @@ export const Recommendations = () => {
           Rule-Based Clinical & Lifestyle Heuristics
         </div>
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-          Personalized Recommendations
+          Educational guidance
         </h1>
         <p className="text-slate-600 text-sm mt-1">
-          Transparent, deterministic guidance generated from your clinical assessments and daily lifestyle tracking.
+          Review guidance linked to observations and supporting sources.
         </p>
       </div>
+
+      <AssistantAction question="Explain my recorded educational recommendations">Ask about this guidance</AssistantAction>
 
       {/* Principle Banner */}
       <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-200/80 flex items-start gap-3">
@@ -140,6 +142,7 @@ export const Recommendations = () => {
                           </span>
                         )}
                         <button
+                          aria-expanded={isExpanded}
                           onClick={() => setExpandedId(isExpanded ? null : rec.id)}
                           className="text-xs text-teal-700 hover:text-teal-900 font-semibold inline-flex items-center gap-1 ml-auto cursor-pointer"
                         >
@@ -158,9 +161,12 @@ export const Recommendations = () => {
                       <strong className="text-slate-900 block mb-0.5">Clinical / Behavioral Trigger:</strong>
                       <p className="text-slate-600 leading-relaxed">{rec.triggerReason}</p>
                     </div>
-                    <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-200/60 flex items-center justify-between">
-                      <span>Source: {rec.source || 'KidneyCare-XAI Clinical Rule Engine'}</span>
-                      {rec.assessmentId && <span>Assessment Ref #{rec.assessmentId}</span>}
+                    {rec.observationPeriod && <p>Observation period · {rec.observationPeriod}</p>}
+                    {rec.knownLimitations && <p>Limitations · {rec.knownLimitations}</p>}
+                    {rec.contraindications && <p>Restrictions · {rec.contraindications}</p>}
+                    <div className="text-[11px] text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                      <span>Source: {rec.source || 'Unavailable for this record'}</span>
+                      {rec.ruleId && <span>Rule {rec.ruleId}</span>}
                     </div>
                   </div>
                 )}

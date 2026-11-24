@@ -39,7 +39,7 @@ apiClient.interceptors.response.use(
 
     // Retry once on 503 (Render cold start) or network timeout
     if (
-      !config?._retried &&
+      config && ['get', 'head', 'options'].includes(config.method?.toLowerCase()) && !config._retried &&
       (error.response?.status === 503 || error.code === 'ECONNABORTED' || !error.response)
     ) {
       config._retried = true;

@@ -1,343 +1,108 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useLocation, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { assessmentApi } from '../api';
-import {
-  HeartPulse,
-  Sparkles,
-  ArrowLeft,
-  CheckCircle2,
-  HelpCircle,
-  AlertTriangle,
-  BarChart3,
-  Calendar,
-  Share2,
-  RefreshCw
-} from 'lucide-react';
-import { Card, Button, Badge, Spinner, Alert } from '../components/common';
+import { Alert, Card, Spinner } from '../components/common';
+import { AssistantAction } from '../components/assistant/assistantContext';
 import { ShapBarChart } from '../components/charts';
+
+const classifications = { ckd: 'CKD class', notckd: 'Non-CKD class', CKD_RISK: 'CKD class', NO_CKD_RISK: 'Non-CKD class', NO_CKD: 'Non-CKD class', LOW_RISK: 'Non-CKD class' };
+const direction = (value) => value > 0 ? 'Toward the CKD class' : value < 0 ? 'Away from the CKD class' : 'No contribution';
 
 export const AssessmentResult = () => {
   const { id } = useParams();
-  const location = useLocation();
-  const [assessment, setAssessment] = useState(location.state?.assessment || null);
-  const [loading, setLoading] = useState(!assessment);
+  return <AssessmentDetails key={id} id={id} />;
+};
+
+function AssessmentDetails({ id }) {
+  const [assessment, setAssessment] = useState(null);
   const [error, setError] = useState('');
-  const [expandedRecId, setExpandedRecId] = useState(null);
+  const [showChart, setShowChart] = useState(false);
 
   useEffect(() => {
-    if (!assessment && id) {
-      setLoading(true);
-      assessmentApi
-        .getAssessmentById(id)
-        .then((data) => setAssessment(data))
-        .catch((err) => {
-          console.error('Failed to fetch assessment:', err);
-          setError('Could not retrieve assessment details.');
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [id, assessment]);
+    const controller = new AbortController();
+    assessmentApi.getAssessmentById(id, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setAssessment(data); })
+      .catch(() => { if (!controller.signal.aborted) setError('Could not retrieve this assessment.'); });
+    return () => controller.abort();
+  }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-        <Spinner size="lg" />
-        <p className="text-sm text-slate-500 font-medium">Loading explainable prediction results...</p>
+  if (error) return <Alert variant="danger">{error} <Link className="underline" to="/history">View assessment history</Link></Alert>;
+  if (!assessment) return <div role="status" className="flex items-center gap-3 py-12"><Spinner /> Loading research assessment…</div>;
+
+  const explanations = assessment.explanations ?? [];
+  const available = !assessment.isDemoMode && assessment.explanationStatus === 'available' && explanations.length > 0;
+  const hasInput = (row) => row.value !== null && row.value !== undefined;
+  const recorded = explanations.filter(hasInput).length;
+  const features = explanations.filter((row) => Number.isFinite(row.shapValue)).sort((a, b) => Math.abs(b.shapValue) - Math.abs(a.shapValue));
+  const missing = explanations.filter((row) => !hasInput(row));
+
+  return <div className="max-w-4xl space-y-6">
+    <header className="space-y-3">
+      <h1 className="text-3xl font-bold">Research assessment result</h1>
+      <p>The model classified the supplied inputs using patterns in the UCI chronic kidney disease benchmark.</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <AssistantAction question="Explain this assessment">Explain this assessment</AssistantAction>
+        <Link className="underline" to="/history">Assessment history</Link>
+        <Link className="underline" to="/reports">Medical records</Link>
       </div>
-    );
-  }
-
-  if (error || !assessment) {
-    return (
-      <div className="max-w-xl mx-auto text-center py-16 space-y-4">
-        <Alert type="danger">{error || 'Assessment not found.'}</Alert>
-        <Link to="/assessment">
-          <Button variant="secondary" icon={ArrowLeft}>
-            Back to Assessment Form
-          </Button>
-        </Link>
-      </div>
-    );
-  }
-
-  const rawScore = assessment.riskScore ?? assessment.risk_score ?? 0;
-  const scorePercent = Math.round(rawScore > 1 ? rawScore : rawScore * 100);
-  const category = assessment.riskCategory || (scorePercent > 65 ? 'HIGH' : scorePercent > 35 ? 'MODERATE' : 'LOW');
-
-  const getRiskColor = (cat) => {
-    const c = (cat || '').toUpperCase();
-    if (c === 'HIGH' || c === 'CRITICAL') return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', badge: 'critical' };
-    if (c === 'MODERATE') return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', badge: 'moderate' };
-    return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badge: 'low' };
-  };
-
-  const riskTheme = getRiskColor(category);
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
-      {/* Top Navigation */}
-      <div className="flex items-center justify-between">
-        <Link to="/assessment" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-medium">
-          <ArrowLeft className="w-4 h-4" />
-          <span>New Assessment</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Link to="/dashboard">
-            <Button size="sm" variant="outline" icon={BarChart3}>
-              Dashboard
-            </Button>
-          </Link>
-          <Link to="/assessment">
-            <Button size="sm" icon={RefreshCw}>
-              Retake
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Status Warning Banners for Demo Mode or Legacy Explanations */}
-      {assessment.isDemoMode && (
-        <Alert type="warning">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div>
-              <strong className="font-semibold block">Demonstration Mode Assessment</strong>
-              <span>This record was generated using demonstration parameters because the machine learning engine was in demo mode. It is not an authentic model inference and cannot be included in research evaluations.</span>
+    </header>
+    {assessment.isDemoMode && <Alert variant="warning">Demonstration record. The recorded classification and attributions are unavailable for use as research results.</Alert>}
+    <Card title="Classification">
+      <dl className="grid gap-5 sm:grid-cols-3">
+        <div><dt className="text-sm text-[var(--text-muted)]">Model output</dt><dd className="font-semibold">
+          {assessment.isDemoMode ? 'Demonstration' : classifications[assessment.prediction] ?? assessment.prediction ?? 'Unavailable'}
+        </dd></div>
+        <div><dt className="text-sm text-[var(--text-muted)]">Model version</dt><dd className="font-semibold">{assessment.modelVersion || 'Unavailable'}</dd></div>
+        <div><dt className="text-sm text-[var(--text-muted)]">Assessment date</dt><dd className="font-semibold">
+          {assessment.createdAt ? new Date(assessment.createdAt).toLocaleString() : 'Unavailable'}
+        </dd></div>
+      </dl>
+    </Card>
+    <Card title="Understand the result" className="space-y-3">
+      <p>The classification describes how the input pattern resembles cases in the benchmark. This research model has no verified estimate of your future disease incidence and cannot diagnose CKD or establish its stage.</p>
+      <p className="text-sm">Measurements, symptoms and clinical history should be reviewed together by a qualified clinician.</p>
+    </Card>
+    <Card title="What influenced the model output?" className="space-y-4">
+      {assessment.explanationStatus === 'legacy_unverified' && <Alert variant="warning">This older assessment has an unverified explanation.</Alert>}
+      {!available && assessment.explanationStatus !== 'legacy_unverified' && <p>Verified feature contributions are unavailable.</p>}
+      {available && <>
+        <p>SHAP values measure how inputs moved the model output in log-odds. A positive contribution moves the output toward the CKD class. These values do not measure causation or percentage-point changes in probability.</p>
+        <ul className="space-y-2">{features.slice(0, 3).map((row) => <li key={row.feature}>
+          <strong>{row.feature.replaceAll('_', ' ')}</strong> · {hasInput(row) ? row.value : 'Not recorded'} · {direction(row.shapValue)} ({row.shapValue > 0 ? '+' : ''}{row.shapValue.toFixed(4)} log-odds)
+        </li>)}</ul>
+        <details onToggle={(event) => setShowChart(event.currentTarget.open)}>
+          <summary className="cursor-pointer font-semibold">Advanced SHAP chart and values</summary>
+          {showChart && <div className="space-y-4 py-3">
+            <ShapBarChart features={features} height={320} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead><tr className="border-b border-[var(--border-subtle)]">
+                  <th className="p-2">Feature</th><th className="p-2">Recorded input</th><th className="p-2">SHAP (log-odds)</th><th className="p-2">Direction</th>
+                </tr></thead>
+                <tbody>{features.map((row) => <tr key={row.feature} className="border-b border-[var(--border-subtle)]">
+                  <th className="p-2" scope="row">{row.feature.replaceAll('_', ' ')}</th>
+                  <td className="p-2">{hasInput(row) ? row.value : 'Not recorded'}</td>
+                  <td className="p-2 tabular-nums">{row.shapValue > 0 ? '+' : ''}{row.shapValue.toFixed(4)}</td>
+                  <td className="p-2">{direction(row.shapValue)}</td>
+                </tr>)}</tbody>
+              </table>
             </div>
-          </div>
-        </Alert>
-      )}
-
-      {assessment.explanationStatus === 'legacy_unverified' && (
-        <Alert type="info">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-sky-600 shrink-0" />
-            <div>
-              <strong className="font-semibold block">Legacy / Unverified Attribution Notice</strong>
-              <span>This assessment was calculated with legacy explanation logic. Feature contributions may not reflect exact log-odds additivity under the current verified TreeSHAP mapping.</span>
-            </div>
-          </div>
-        </Alert>
-      )}
-
-      {assessment.explanationStatus === 'explanation_unavailable' && (
-        <Alert type="danger">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
-            <div>
-              <strong className="font-semibold block">Attribution Unavailable</strong>
-              <span>SHAP feature attributions could not be verified for this assessment due to missing or unaligned transformer metadata.</span>
-            </div>
-          </div>
-        </Alert>
-      )}
-
-      {/* Hero Result Banner */}
-      <div className={`p-8 rounded-3xl border ${riskTheme.border} ${riskTheme.bg} transition-all`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <div className="md:col-span-2 space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant={riskTheme.badge} size="md">
-                {category} Risk Profile
-              </Badge>
-              <span className="text-xs text-slate-500">
-                Model {assessment.modelVersion || 'v1.0 (XGBoost)'}
-              </span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Estimated Kidney Risk Index: {scorePercent}%
-            </h1>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Based on the submitted biochemical and clinical markers, the machine learning model calculated a {scorePercent}% relative probability of chronic kidney compromise.
-            </p>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur rounded-2xl p-5 border border-slate-200/80 text-center shadow-xs">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-              Prediction Class
-            </span>
-            <span className="text-lg font-bold text-slate-900 block">
-              {assessment.prediction === 'CKD_RISK' || scorePercent >= 50 ? 'Elevated CKD Risk' : 'Low Kidney Risk'}
-            </span>
-            <span className="text-[11px] text-slate-400 block mt-1">
-              {assessment.createdAt ? new Date(assessment.createdAt).toLocaleString() : 'Evaluated just now'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* SHAP Feature Contribution Bar Chart */}
-      <Card
-        title="Explainable AI (SHAP) Attribution Analysis"
-        subtitle="Individual biomarker contributions pushing estimated risk higher (Red) or lower (Green)"
-        icon={HeartPulse}
-      >
-        <div className="mb-4 text-xs text-slate-500 leading-relaxed">
-          SHAP (SHapley Additive exPlanations) computes the exact marginal contribution of each lab test value relative to the base population average.
-        </div>
-        <ShapBarChart features={assessment.explanations || []} height={320} />
-      </Card>
-
-      {/* Feature Breakdown Table */}
-      {assessment.explanations && assessment.explanations.length > 0 && (
-        <Card title="Biomarker Value Breakdown" subtitle="Detailed values submitted and their directional influence">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700">
-              <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3">Biomarker Feature</th>
-                  <th className="px-4 py-3">Your Value</th>
-                  <th className="px-4 py-3">SHAP Value</th>
-                  <th className="px-4 py-3">Directional Effect</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {assessment.explanations.map((exp, idx) => {
-                  const sVal = exp.shapValue ?? exp.shap_value ?? 0;
-                  const isPositive = sVal >= 0;
-                  return (
-                    <tr key={idx} className="hover:bg-slate-50/80">
-                      <td className="px-4 py-3 font-medium text-slate-900 capitalize">
-                        {(exp.feature || exp.featureName || '').replace(/_/g, ' ')}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-slate-800">
-                        {exp.value ?? exp.featureValue ?? '—'}
-                      </td>
-                      <td className={`px-4 py-3 font-mono font-medium ${isPositive ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {isPositive ? '+' : ''}{Number(sVal).toFixed(4)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
-                          isPositive ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        }`}>
-                          {isPositive ? 'Increases Risk' : 'Protective / Decreases'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* Bimodal Explainability: Natural Language Clinical Synthesis */}
-      <Card
-        title="Clinical Narrative Synthesis (Bimodal Explainability)"
-        subtitle="Translating mathematical SHAP marginal attributions into plain clinical decision language"
-        icon={Sparkles}
-        className="border-l-4 border-l-teal-600"
-      >
-        <div className="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
-          <p>
-            <strong className="font-semibold text-slate-900">Interpretation Summary: </strong>
-            {scorePercent >= 50 ? (
-              <span>
-                The predictive model identified an <span className="font-semibold text-rose-600">elevated probability</span> of renal functional decline.
-                {assessment.explanations && assessment.explanations.length > 0 && (
-                  <span>
-                    {' '}The most substantial risk elevation stems from{' '}
-                    <span className="font-medium text-slate-900 capitalize">
-                      {(assessment.explanations[0]?.feature || assessment.explanations[0]?.featureName || 'primary marker').replace(/_/g, ' ')}
-                    </span>{' '}
-                    (model margin attribution: <span className="font-mono text-rose-600 font-bold">{(assessment.explanations[0]?.shapValue ?? 0) >= 0 ? '+' : ''}{Number(assessment.explanations[0]?.shapValue ?? 0).toFixed(3)} log-odds</span>)
-                    {assessment.explanations[1] && (
-                      <span>
-                        {' '}followed by{' '}
-                        <span className="font-medium text-slate-900 capitalize">
-                          {(assessment.explanations[1]?.feature || assessment.explanations[1]?.featureName || '').replace(/_/g, ' ')}
-                        </span>
-                        {' '}(<span className="font-mono text-rose-600 font-bold">{(assessment.explanations[1]?.shapValue ?? 0) >= 0 ? '+' : ''}{Number(assessment.explanations[1]?.shapValue ?? 0).toFixed(3)} log-odds</span>)
-                      </span>
-                    )}.
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span>
-                The biochemical evaluation indicates a <span className="font-semibold text-emerald-600">low kidney risk profile</span>.
-                Current filtration markers and hemodynamic indicators reside within acceptable physiological baselines.
-              </span>
-            )}
-          </p>
-
-          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-600 flex items-start gap-2">
-            <HelpCircle className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-            <div>
-              <strong className="text-slate-800">Additivity & Mathematical Interpretation: </strong>
-              SHAP attribution values reflect additive contributions in the model's margin (log-odds) space: margin = base value + Σφᵢ, where predicted probability is the logistic sigmoid of the sum. SHAP values are directional contributions to the margin, not linear percentage shifts in probability.
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Generated Traceable Recommendations */}
-      <Card
-        title="Personalized Lifestyle & Clinical Recommendations"
-        subtitle="Transparent decision-support rules generated from your assessment parameters"
-        icon={Sparkles}
-      >
-        {assessment.recommendations && assessment.recommendations.length > 0 ? (
-          <div className="space-y-4">
-            {assessment.recommendations.map((rec) => {
-              const isExpanded = expandedRecId === rec.id;
-              return (
-                <div
-                  key={rec.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-white hover:border-teal-300 transition-colors shadow-2xs"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 flex-1">
-                      <CheckCircle2 className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {rec.recommendation || rec.recommendationText}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <Badge variant={rec.priority === 'HIGH' ? 'critical' : 'moderate'} size="sm">
-                            {rec.priority || 'Medium'} Priority
-                          </Badge>
-                          <Badge variant="default" size="sm">{rec.category}</Badge>
-                          <button
-                            onClick={() => setExpandedRecId(isExpanded ? null : rec.id)}
-                            className="text-xs text-teal-700 hover:text-teal-900 font-medium inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <HelpCircle className="w-3.5 h-3.5" />
-                            {isExpanded ? 'Hide reason' : 'Why am I seeing this?'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 bg-slate-50/70 p-3 rounded-lg">
-                      <span className="font-semibold text-slate-800 block mb-1">Trigger Rationale:</span>
-                      <p>{rec.triggerReason}</p>
-                      <div className="mt-2 text-[11px] text-slate-400">
-                        Source: {rec.source || 'KidneyCare-XAI Clinical Rule Engine'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-4 rounded-xl bg-slate-50 text-slate-500 text-xs">
-            No specific rule triggers detected for this profile. Continue maintaining balanced hydration and lifestyle habits.
-          </div>
-        )}
-      </Card>
-
-      {/* Safety Notice */}
-      <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <strong>Decision Support Notice:</strong> These results and SHAP attributions reflect statistical pattern matching on training cohorts. They should never be used as self-diagnosis or to substitute a comprehensive medical consultation.
-        </div>
-      </div>
-    </div>
-  );
-};
+          </div>}
+        </details>
+      </>}
+    </Card>
+    <Card title="Input availability">
+      <p>{available ? `${recorded} of ${explanations.length} inputs shown by the explanation have a recorded numeric value.` : 'The verified input breakdown is unavailable.'}</p>
+      {available && missing.length > 0 && <p className="mt-2 text-sm">Numeric value unavailable in this response for {missing.map((row) => row.feature.replaceAll('_', ' ')).join(', ')}.</p>}
+    </Card>
+    <Card title="Educational recommendations" className="space-y-4">
+      {assessment.recommendations?.length ? <ul className="space-y-3">{assessment.recommendations.map((rec) => <li key={rec.id}>
+        <p className="font-semibold">{rec.recommendation}</p>
+        {rec.triggerReason && <p className="text-sm">{rec.triggerReason}</p>}
+        {rec.knownLimitations && <p className="text-sm">{rec.knownLimitations}</p>}
+        {rec.source && <p className="text-sm">Source · {rec.source}</p>}
+      </li>)}</ul> : <p>No linked educational recommendations.</p>}
+      <Link className="underline" to="/recommendations">View guidance</Link>
+    </Card>
+  </div>;
+}

@@ -22,6 +22,11 @@ def documents():
     return result
 
 
+def corpus_version():
+    hashes = "".join(item["contentHash"] for _, item in sorted(documents().items()))
+    return "sha256:" + hashlib.sha256(hashes.encode("ascii")).hexdigest()
+
+
 @lru_cache
 def encoder(name):
     from sentence_transformers import SentenceTransformer

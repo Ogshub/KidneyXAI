@@ -190,13 +190,11 @@ def test_shap_additivity_within_numerical_tolerance():
 
 def test_unknown_categories():
     """Verify preprocessor handles unexpected category values without crashing."""
-    req = PredictionRequest(
-        age=40,
-        bloodPressure=120,
-        hypertension="unrecognized_category_value",
-        appetite="strange_input",
-    )
+    req = PredictionRequest(age=40, bloodPressure=120)
     feature_dict = _request_to_feature_dict(req)
+    # Exercise the fitted transform independently of the stricter API boundary.
+    feature_dict["hypertension"] = "unrecognized_category_value"
+    feature_dict["appetite"] = "strange_input"
     feature_df = pd.DataFrame([feature_dict])
 
     # Should not raise exception

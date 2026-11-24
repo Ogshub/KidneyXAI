@@ -1,5 +1,13 @@
 # Phase 4 PCER prototype
 
+## Phase 6 implementation amendment
+
+The synthetic-only conversational path adds provider-assisted intent selection and response composition. Spring remains the tool authorization boundary. Minimal page references are validated against account ownership. The provider receives bounded context only for explicitly allowlisted synthetic accounts, and the internal endpoints also require a separate research-mode gate.
+
+Structured claims carry identifiers and text. Verification rejects invented identifiers, altered numerical facts, changed dates and duplicate claims. Accepted text must match deterministic facts or permitted retrieved excerpts. This approach constrains output vocabulary and leaves semantic relevance and clinical correctness subject to qualified review. The frozen comparative dataset and existing Phase 5 results remain unchanged. Final comparisons need a versioned run configuration identifying this amended architecture.
+
+The implementation is undergoing integration verification. No live conversational pilot or final comparative result is established by these changes.
+
 The browser uses the Spring JWT API. Spring owns account lookup, conversation storage, rate limiting and context selection. FastAPI handles structured routing and response decisions behind mandatory internal authentication. The external adapter can select from public reviewed excerpts. It receives neither user questions nor patient context.
 
 ## Validation pipeline

@@ -340,6 +340,24 @@ class MedicalRecordsIntegrationTest {
         }
     }
 
+    @Test
+    void deletionRequiresPasswordAndRevokesTokensAfterEmailReuse() throws Exception {
+        String email = "delete-" + UUID.randomUUID() + "@example.test";
+        String password = UUID.randomUUID().toString();
+        var registration = Map.of("name", "Synthetic Deletion", "email", email, "password", password);
+        String auth = "Bearer " + body(send(post("/api/auth/register"), null, registration), 201).path("token").asText();
+        long userId = jdbc.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, email);
+        jdbc.update("INSERT INTO medical_reports(user_id,report_type,report_date) VALUES (?, 'bloodwork', CURRENT_DATE)", userId);
+        send(delete("/api/profile"), auth, Map.of("password", "incorrect", "confirmation", "DELETE"))
+                .andExpect(status().isForbidden());
+        send(delete("/api/profile"), auth, Map.of("password", password, "confirmation", "DELETE"))
+                .andExpect(status().isNoContent());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM medical_reports WHERE user_id = ?", Integer.class, userId));
+        mvc.perform(get("/api/dashboard").header("Authorization", auth)).andExpect(status().isUnauthorized());
+        body(send(post("/api/auth/register"), null, registration), 201);
+        mvc.perform(get("/api/dashboard").header("Authorization", auth)).andExpect(status().isUnauthorized());
+    }
+
     private String register() throws Exception {
         String email = UUID.randomUUID() + "@example.test";
         return "Bearer " + body(send(post("/api/auth/register"), null,

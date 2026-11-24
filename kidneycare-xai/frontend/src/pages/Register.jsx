@@ -160,7 +160,7 @@ export const Register = () => {
             },
             {
               title: 'Explainable AI with TreeSHAP',
-              desc: 'Never guess what drove a prediction. Every score is dissected into positive and negative clinical feature weights.',
+              desc: 'See how recorded inputs contributed to the research classification.',
               icon: Activity,
             },
             {

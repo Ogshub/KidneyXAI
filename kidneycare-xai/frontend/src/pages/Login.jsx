@@ -228,7 +228,7 @@ export const Login = () => {
 
             <p className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-              <span>Every individual prediction delivers deterministic feature weights and KDIGO-aligned clinical interventions.</span>
+              <span>Research assessments explain the inputs that influenced the model output.</span>
             </p>
           </div>
         </div>
@@ -349,6 +349,9 @@ export const Login = () => {
           {/* Error display */}
           {new URLSearchParams(location.search).get('reason') === 'session-expired' && (
             <Alert variant="warning">{SESSION_EXPIRED_MESSAGE}</Alert>
+          )}
+          {new URLSearchParams(location.search).get('reason') === 'account-deleted' && (
+            <Alert variant="success">Your account and associated records were deleted.</Alert>
           )}
           {error && (
             <Alert type="danger" className="mb-5" onClose={() => setError('')}>

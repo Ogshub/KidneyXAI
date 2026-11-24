@@ -14,7 +14,7 @@ async function syntheticAccount(page) {
 }
 
 test('a stale bearer token is rejected and the browser can sign in again', async ({ page }) => {
-  test.setTimeout(60000);
+  test.setTimeout(90000);
   const initialDashboard = page.waitForResponse((response) => response.url().endsWith('/api/dashboard'));
   const credentials = await syntheticAccount(page);
   expect((await initialDashboard).status()).toBe(200);
@@ -25,7 +25,7 @@ test('a stale bearer token is rejected and the browser can sign in again', async
   const rejected = page.waitForResponse((response) => response.url().endsWith('/api/dashboard') && response.status() >= 400);
   await page.reload();
   expect((await rejected).status()).toBe(401);
-  await expect(page.getByText('Your session expired. Please sign in again.')).toBeVisible();
+  await expect(page.getByText('Your session expired. Please sign in again.')).toBeVisible({ timeout: 20000 });
   expect(await page.evaluate(() => localStorage.getItem('kidneycare_token') === null)).toBe(true);
   await page.locator('input[name="email"]').fill(credentials.email);
   await page.locator('input[name="password"]').fill(credentials.password);

@@ -16,6 +16,13 @@ public class ProfileController {
 
     private final ProfileService profileService;
 
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAccount(Authentication auth,
+            @Valid @RequestBody com.kidneycare.dto.request.AccountDeletionRequest request) {
+        profileService.deleteAccount(auth.getName(), request.password());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<ProfileResponse> getProfile(Authentication auth) {
         return ResponseEntity.ok(profileService.getProfile(auth.getName()));

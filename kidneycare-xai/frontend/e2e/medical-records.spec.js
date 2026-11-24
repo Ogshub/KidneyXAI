@@ -28,8 +28,9 @@ async function addMeasurement(page, value, date, unit) {
 
 test('creates, downloads, edits, compares and deletes private reports', async ({ page }, info) => {
   await register(page);
-  await page.getByRole('link', { name: 'Manage reports' }).click();
-  await expect(page.getByText('No reports on this page.')).toBeVisible();
+  await page.getByRole('link', { name: 'Open medical records' }).click();
+  await expect(page.getByText(/No records yet/)).toBeVisible();
+  await page.getByRole('button', { name: 'Add report', exact: true }).click();
   await page.getByLabel('Report date').fill('2025-10-01');
   await page.getByLabel('Laboratory', { exact: true }).fill('Synthetic First Lab');
   const pdf = Buffer.from('%PDF-1.7\n%%EOF\n');
@@ -55,6 +56,7 @@ test('creates, downloads, edits, compares and deletes private reports', async ({
   await page.screenshot({ path: info.outputPath('report-details.png'), fullPage: true });
 
   await page.getByRole('navigation', { name: 'Medical records' }).getByRole('link', { name: 'Medical reports' }).click();
+  await page.getByRole('button', { name: 'Add report', exact: true }).click();
   await page.getByLabel('Report date').fill('2025-10-02');
   await page.getByLabel('Laboratory', { exact: true }).fill('Synthetic Second Lab');
   await page.getByRole('button', { name: 'Create report' }).click();
@@ -62,7 +64,7 @@ test('creates, downloads, edits, compares and deletes private reports', async ({
   const secondId = page.url().split('/').at(-1);
   await addMeasurement(page, '1.5', '2025-10-02', 'mg/dL');
 
-  await page.getByRole('link', { name: 'Laboratory history', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Medical records' }).getByRole('link', { name: 'Health trends', exact: true }).click();
   await expect(page.getByRole('img', { name: /Serum creatinine over time/ })).toBeVisible();
   await expect(page.getByText(/1.5 mg\/dL/)).toBeVisible();
 
@@ -74,6 +76,7 @@ test('creates, downloads, edits, compares and deletes private reports', async ({
   await page.screenshot({ path: info.outputPath('report-comparison.png'), fullPage: true });
 
   await page.goto('/assessment');
+  await page.getByRole('button', { name: 'Laboratory-Based Research Assessment' }).click();
   await page.getByRole('button', { name: 'Review saved laboratory values' }).click();
   await expect(page.getByText(/serum creatinine · 1.5 mg\/dL/)).toBeVisible();
   await page.getByRole('button', { name: 'Confirm and copy values' }).click();
@@ -98,10 +101,13 @@ test('creates, downloads, edits, compares and deletes private reports', async ({
 test('renders a model-unavailable response without showing a prediction', async ({ page }) => {
   await register(page);
   await page.goto('/assessment');
+  await page.getByRole('button', { name: 'Laboratory-Based Research Assessment' }).click();
   await page.route(`${api}/assessments`, async (route) => {
     await route.fulfill({ status: 503, json: { message: 'Risk assessment temporarily unavailable' } });
   });
-  await page.getByRole('button', { name: 'Calculate My Kidney Risk' }).click();
-  await expect(page.getByText('Risk assessment temporarily unavailable', { exact: false })).toBeVisible();
+  await page.getByLabel('Age (Years)').fill('45');
+  await page.getByLabel('Diastolic Blood Pressure (mmHg)').fill('80');
+  await page.getByRole('button', { name: 'Run research assessment' }).click();
+  await expect(page.getByText('The research model is currently unavailable. Try again shortly.')).toBeVisible();
   await expect(page).toHaveURL(/\/assessment$/);
 });

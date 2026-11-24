@@ -23,7 +23,57 @@ import {
   LogIn
 } from 'lucide-react';
 import { Card, Button, Input, Select, Badge, Alert, Spinner } from '../components/common';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+function AccountDeletion() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [confirming, setConfirming] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const cancel = () => {
+    setPassword('');
+    setConfirmation('');
+    setError('');
+    setConfirming(false);
+  };
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!password || confirmation !== 'DELETE' || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await profileApi.deleteAccount(password, confirmation);
+      logout();
+      navigate('/login?reason=account-deleted', { replace: true });
+    } catch (failure) {
+      setError(failure.response?.status === 403
+        ? 'The password did not match. Confirm your current password and try again.'
+        : 'Account deletion could not be confirmed. Try again shortly.');
+      setPassword('');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <Card title="Delete account and records" className="space-y-4">
+    <p>Account deletion permanently removes your profile, medical records and attachments, journal entries, assessments and assistant conversations.</p>
+    {confirming ? <form className="space-y-4 max-w-md" onSubmit={submit}>
+      {error && <Alert variant="danger">{error}</Alert>}
+      <Input name="delete-current-password" label="Current password" type="password" autoComplete="current-password"
+        required value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} />
+      <Input name="delete-confirmation" label="Type DELETE to confirm" required autoComplete="off"
+        value={confirmation} onChange={(event) => setConfirmation(event.target.value)} disabled={busy} />
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" variant="danger" loading={busy} disabled={!password || confirmation !== 'DELETE'}>Permanently delete account</Button>
+        <Button variant="secondary" onClick={cancel} disabled={busy}>Cancel</Button>
+      </div>
+    </form> : <Button variant="danger" onClick={() => setConfirming(true)}>Delete account</Button>}
+  </Card>;
+}
 
 export const Settings = () => {
   const { user, isAuthenticated, updateUser } = useAuth();
@@ -681,6 +731,7 @@ export const Settings = () => {
       {/* ── TAB 4: Preferences & Cache (Accessible to Everyone) ── */}
       {activeTab === 'privacy' && (
         <div className="space-y-8">
+          {isAuthenticated && <AccountDeletion />}
           <Card
             title="Data Export & Portability"
             subtitle="Download clinical preferences and active profile configuration in machine-readable JSON"

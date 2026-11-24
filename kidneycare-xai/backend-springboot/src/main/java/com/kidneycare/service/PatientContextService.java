@@ -1,8 +1,10 @@
 package com.kidneycare.service;
 
 import com.kidneycare.dto.response.*;
+import com.kidneycare.entity.MedicalReport;
 import com.kidneycare.exception.ResourceNotFoundException;
 import com.kidneycare.repository.AssessmentRepository;
+import com.kidneycare.repository.MedicalReportRepository;
 import com.kidneycare.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class PatientContextService {
     private final AssessmentService assessments;
     private final RecommendationService recommendations;
     private final AssessmentRepository assessmentRepository;
+    private final MedicalReportRepository reportRepository;
     private final UserRepository users;
 
     public Optional<HealthProfileResponse> healthProfile(String email) {
@@ -36,6 +39,19 @@ public class PatientContextService {
 
     public Optional<MedicalReportResponse> latestReport(String email) {
         return records.latestReport(email);
+    }
+
+    public MedicalReportResponse report(String email, long id) {
+        return records.get(email, id);
+    }
+
+    public List<MedicalReportResponse> recentReports(String email, int limit) {
+        return records.list(email, 0, limit).getContent();
+    }
+
+    public List<Long> reportsOnDate(String email, LocalDate date) {
+        return reportRepository.findFirst2ByUserIdAndReportDateOrderByIdDesc(userId(email), date).stream()
+                .map(MedicalReport::getId).toList();
     }
 
     public List<LabResultResponse> laboratoryHistory(String email, String parameter, int limit) {
@@ -52,6 +68,14 @@ public class PatientContextService {
 
     public ActivitySummaryResponse lifestyleSummary(String email, String period, LocalDate date) {
         return activities.getSummary(email, period, date);
+    }
+
+    public Optional<ActivityResponse> journalEntry(String email, LocalDate date) {
+        return activities.getActivities(email, date, date).stream().findFirst();
+    }
+
+    public AssessmentResponse assessment(String email, long id) {
+        return assessments.getAssessment(email, id);
     }
 
     public Optional<AssessmentResponse> latestAssessment(String email) {

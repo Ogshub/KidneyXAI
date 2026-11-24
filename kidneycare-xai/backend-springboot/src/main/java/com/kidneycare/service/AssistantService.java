@@ -2,6 +2,8 @@ package com.kidneycare.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.kidneycare.dto.request.AssistantPageContext;
 import com.kidneycare.dto.response.AssistantResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -12,10 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AssistantService {
@@ -26,54 +30,82 @@ public class AssistantService {
     private final ObjectMapper json;
     private final ConversationService conversations;
     private final AssistantContextTools tools;
+    private final Set<String> syntheticAccounts;
 
     public AssistantService(@Value("${ml.service.url:http://localhost:8000}") String url,
             @Value("${ml.internal.secret:}") String secret, ObjectMapper json,
-            ConversationService conversations, AssistantContextTools tools) {
+            ConversationService conversations, AssistantContextTools tools,
+            @Value("${assistant.conversational.research:disabled}") String research,
+            @Value("${assistant.synthetic.accounts:}") String accounts) {
         this.secret = secret;
         this.json = json;
         this.conversations = conversations;
         this.tools = tools;
+        this.syntheticAccounts = "enabled".equals(research)
+                ? Arrays.stream(accounts.split(",")).map(String::strip).filter(account -> !account.isEmpty())
+                    .collect(Collectors.toUnmodifiableSet())
+                : Set.of();
         var transport = new SimpleClientHttpRequestFactory();
         transport.setConnectTimeout(Duration.ofSeconds(2));
         transport.setReadTimeout(Duration.ofSeconds(18));
         this.client = RestClient.builder().baseUrl(url).requestFactory(transport).build();
     }
 
-    public AssistantResponse chat(String email, UUID existing, String question) {
+    public AssistantResponse chat(String email, UUID existing, String question, AssistantPageContext page) {
         long owner = conversations.owner(email);
         var previous = existing == null ? List.<ConversationService.Turn>of() : conversations.history(owner, existing, 1);
         limit(owner);
+        tools.validatePage(email, page);
+        boolean conversational = syntheticAccounts.contains(email);
         UUID conversation = existing == null ? UUID.randomUUID() : existing;
         UUID message = UUID.randomUUID();
         long started = System.nanoTime();
         var payload = new HashMap<String, Object>();
         payload.put("message", question);
-        if (!previous.isEmpty()) {
+        if (page != null) payload.put("pageContext", page);
+        if (!previous.isEmpty() && (!conversational || "conversational_research".equals(previous.get(0).response().providerMode()))) {
             payload.put("previousIntent", previous.get(0).response().intent());
             payload.put("previousMessage", previous.get(0).question());
             String parameter = previous.get(0).response().patientRecordReferences().stream()
                     .map(ref -> ref.get("parameter")).filter(String.class::isInstance).map(String.class::cast)
                     .findFirst().orElse(null);
             if (parameter != null) payload.put("previousParameter", parameter);
+            var reportIds = previous.get(0).response().patientRecordReferences().stream()
+                    .filter(ref -> "report".equals(ref.get("kind"))).map(ref -> ref.get("id"))
+                    .filter(Number.class::isInstance).map(Number.class::cast).map(Number::longValue).distinct().toList();
+            if (reportIds.size() == 1) payload.put("previousReportId", reportIds.get(0));
         }
 
         AssistantResponse response;
-        JsonNode remote = null;
         var metadata = new HashMap<String, Object>();
         try {
-            var route = json.treeToValue(call("/route", payload), AssistantContextTools.Route.class);
-            payload.put("context", tools.read(email, route));
-            remote = call("/respond", payload);
+            AssistantContextTools.Route route;
+            if (conversational) {
+                var plan = call("/conversational/plan", payload);
+                route = plan.hasNonNull("route") ? json.treeToValue(plan.get("route"), AssistantContextTools.Route.class) : null;
+                for (String key : List.of("plan", "planError", "planVersion", "planTokens")) {
+                    if (plan.hasNonNull(key)) payload.put(key, plan.get(key));
+                }
+                if (route == null && !plan.hasNonNull("planError")) {
+                    throw new IllegalStateException("Invalid assistant plan");
+                }
+            } else {
+                route = json.treeToValue(call("/route", payload), AssistantContextTools.Route.class);
+            }
+            if (route != null) payload.put("context", tools.read(email, route));
+            JsonNode remote = call(conversational ? "/conversational/respond" : "/respond", payload);
             if (!Set.of("ANSWER", "CLARIFY", "ABSTAIN").contains(remote.path("decision").asText())
-                    || !route.intent().equals(remote.path("intent").asText())) {
+                    || (route != null && !route.intent().equals(remote.path("intent").asText()))) {
                 throw new IllegalStateException("Invalid assistant decision");
             }
             metadata.put("retrieval", remote.path("retriever").asText("local-policy"));
             metadata.put("componentFlags", remote.path("componentFlags"));
-            var body = (com.fasterxml.jackson.databind.node.ObjectNode) remote;
+            for (String key : List.of("tool", "planModelVersion", "providerTokens", "corpusVersion")) {
+                if (remote.hasNonNull(key)) metadata.put(key, remote.get(key));
+            }
+            var body = (ObjectNode) remote;
             body.put("conversationId", conversation.toString());
-            body.remove(List.of("retriever", "componentFlags"));
+            body.remove(List.of("retriever", "componentFlags", "tool", "planModelVersion", "providerTokens"));
             body.put("messageId", message.toString());
             body.put("latencyMs", elapsed(started));
             response = json.treeToValue(body, AssistantResponse.class);
@@ -84,10 +116,12 @@ public class AssistantService {
             response = new AssistantResponse(conversation, message, "ABSTAIN", "OUT_OF_SCOPE",
                     "The assistant is temporarily unavailable. If this may be an emergency, contact your local emergency services.",
                     "not_available", List.of(), List.of(), List.of(), List.of(), "NONE", List.of(),
-                    "unavailable", elapsed(started), List.of("ASSISTANT_UNAVAILABLE"), "M4");
+                    "unavailable", elapsed(started), List.of("ASSISTANT_UNAVAILABLE"), "M4",
+                    conversational ? "conversational_research" : "unavailable", null);
         }
         metadata.putAll(Map.of("configuration", response.configuration(), "version", response.modelVersion(),
-                "promptVersion", "evidence-selection-1", "context", "owner-scoped"));
+                "promptVersion", conversational ? "conversational-1" : "evidence-selection-1",
+                "context", response.contextStatus(), "intent", response.intent()));
         conversations.save(owner, existing == null, question, response, metadata);
         return response;
     }

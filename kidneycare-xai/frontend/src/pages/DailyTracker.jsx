@@ -1,16 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AssistantAction } from '../components/assistant/assistantContext';
 import { activityApi } from '../api';
 import {
   Activity,
   Droplet,
-  Moon,
-  Scale,
   Calendar,
   Check,
   CalendarDays,
   CalendarRange,
 } from 'lucide-react';
-import { Card, Button, Input, Select, Alert, Spinner, Badge, DatePickerInput } from '../components/common';
+import { Card, Button, Input, Select, Alert, Spinner, Badge } from '../components/common';
 import { MonthlyTrackerView } from '../components/tracker/MonthlyTrackerView';
 
 /** Convert ISO date string "YYYY-MM-DD" → "DD/MM/YYYY" for display */
@@ -19,6 +18,56 @@ const fmtDate = (iso) => {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
 };
+
+const emptyEntry = (activityDate) => ({
+  activityDate,
+  waterIntakeLiters: '',
+  exerciseMinutes: '',
+  exerciseType: '',
+  sleepHours: '',
+  sleepQuality: '',
+  saltLevel: '',
+  fastFood: '',
+  sugaryDrinks: '',
+  smoking: '',
+  alcohol: '',
+  weightKg: '',
+  stressLevel: '',
+  systolicBp: '',
+  diastolicBp: '',
+  medicationStatus: 'NOT_RECORDED',
+  symptoms: '',
+  personalNotes: '',
+  doctorRestrictions: '',
+});
+const fromBoolean = (value) => value == null ? '' : value ? 'yes' : 'no';
+const toBoolean = (value) => value === '' ? null : value === 'yes';
+const missingOption = { value: '', label: 'Not recorded' };
+const numericInput = (value) => value == null ? '' : String(value);
+
+function toForm(entry) {
+  return {
+    ...emptyEntry(entry.activityDate),
+    waterIntakeLiters: numericInput(entry.waterIntakeLiters),
+    exerciseMinutes: numericInput(entry.exerciseMinutes),
+    exerciseType: entry.exerciseType ?? '',
+    sleepHours: numericInput(entry.sleepHours),
+    sleepQuality: entry.sleepQuality ?? '',
+    saltLevel: entry.saltLevel ?? '',
+    fastFood: fromBoolean(entry.fastFood),
+    sugaryDrinks: numericInput(entry.sugaryDrinks),
+    smoking: fromBoolean(entry.smoking),
+    alcohol: fromBoolean(entry.alcohol),
+    weightKg: numericInput(entry.weightKg),
+    stressLevel: entry.stressLevel ?? '',
+    systolicBp: numericInput(entry.systolicBp),
+    diastolicBp: numericInput(entry.diastolicBp),
+    medicationStatus: entry.medicationStatus ?? 'NOT_RECORDED',
+    symptoms: entry.symptoms ?? '',
+    personalNotes: entry.personalNotes ?? '',
+    doctorRestrictions: entry.doctorRestrictions ?? '',
+  };
+}
 
 export const DailyTracker = () => {
   const now = new Date();
@@ -30,45 +79,33 @@ export const DailyTracker = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   // ─── Form state ─────────────────────────────────────────────────────────────
-  const [form, setForm] = useState({
-    activityDate: todayStr,
-    waterIntakeLiters: '2.0',
-    exerciseMinutes: '30',
-    exerciseType: 'Walking',
-    sleepHours: '7.5',
-    sleepQuality: 'Restful',
-    saltLevel: 'Medium',
-    fastFood: false,
-    sugaryDrinks: '0',
-    smoking: false,
-    alcohol: false,
-    weightKg: '68.0',
-    stressLevel: 'Low',
-    systolicBp: '',
-    diastolicBp: '',
-    medicationStatus: 'NOT_RECORDED',
-    symptoms: '',
-    personalNotes: '',
-    doctorRestrictions: '',
-  });
+  const [form, setForm] = useState(() => emptyEntry(todayStr));
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const shouldPopulateToday = useRef(true);
 
   const fetchRecent = useCallback(async () => {
     try {
       setHistoryLoading(true);
+      setHistoryError('');
       const data = await activityApi.getActivities();
       setHistory(data || []);
-    } catch (err) {
-      console.error('Failed to load activity history:', err);
+      if (shouldPopulateToday.current) {
+        shouldPopulateToday.current = false;
+        const today = data?.find((entry) => entry.activityDate === todayStr);
+        if (today) setForm(toForm(today));
+      }
+    } catch {
+      setHistoryError('Saved journal entries could not be loaded.');
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
+  }, [todayStr]);
 
   useEffect(() => {
     fetchRecent();
@@ -92,6 +129,7 @@ export const DailyTracker = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || historyLoading || historyError || !form.activityDate || form.activityDate > todayStr) return;
     setLoading(true);
     setError('');
     setSuccess('');
@@ -105,10 +143,10 @@ export const DailyTracker = () => {
         sleepHours: form.sleepHours ? parseFloat(form.sleepHours) : null,
         sleepQuality: form.sleepQuality || null,
         saltLevel: form.saltLevel || null,
-        fastFood: Boolean(form.fastFood),
-        sugaryDrinks: form.sugaryDrinks ? parseInt(form.sugaryDrinks, 10) : 0,
-        smoking: Boolean(form.smoking),
-        alcohol: Boolean(form.alcohol),
+        fastFood: toBoolean(form.fastFood),
+        sugaryDrinks: form.sugaryDrinks ? parseInt(form.sugaryDrinks, 10) : null,
+        smoking: toBoolean(form.smoking),
+        alcohol: toBoolean(form.alcohol),
         weightKg: form.weightKg ? parseFloat(form.weightKg) : null,
         stressLevel: form.stressLevel || null,
         systolicBp: form.systolicBp ? parseInt(form.systolicBp, 10) : null,
@@ -157,34 +195,18 @@ export const DailyTracker = () => {
    * Switches to Daily tab and pre-fills all recorded values for editing.
    */
   const handleSelectDateForEdit = (dateStr) => {
+    if (!dateStr || dateStr > todayStr) return;
     setActiveView('daily');
+    setSuccess('');
+    setError('');
     const existing = history.find((h) => h.activityDate === dateStr);
-    if (existing) {
-      setForm({
-        activityDate: existing.activityDate,
-        waterIntakeLiters: existing.waterIntakeLiters != null ? String(existing.waterIntakeLiters) : '2.0',
-        exerciseMinutes: existing.exerciseMinutes != null ? String(existing.exerciseMinutes) : '30',
-        exerciseType: existing.exerciseType || 'Walking',
-        sleepHours: existing.sleepHours != null ? String(existing.sleepHours) : '7.5',
-        sleepQuality: existing.sleepQuality || 'Restful',
-        saltLevel: existing.saltLevel || 'Medium',
-        fastFood: Boolean(existing.fastFood),
-        sugaryDrinks: existing.sugaryDrinks != null ? String(existing.sugaryDrinks) : '0',
-        smoking: Boolean(existing.smoking),
-        alcohol: Boolean(existing.alcohol),
-        weightKg: existing.weightKg != null ? String(existing.weightKg) : '',
-        stressLevel: existing.stressLevel || 'Low',
-        systolicBp: existing.systolicBp != null ? String(existing.systolicBp) : '',
-        diastolicBp: existing.diastolicBp != null ? String(existing.diastolicBp) : '',
-        medicationStatus: existing.medicationStatus || 'NOT_RECORDED',
-        symptoms: existing.symptoms || '',
-        personalNotes: existing.personalNotes || '',
-        doctorRestrictions: existing.doctorRestrictions || '',
-      });
-    } else {
-      setForm((prev) => ({ ...prev, activityDate: dateStr }));
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setForm(existing ? toForm(existing) : emptyEntry(dateStr));
+  };
+
+  const shiftDate = (days) => {
+    const date = new Date(form.activityDate + 'T12:00:00');
+    date.setDate(date.getDate() + days);
+    handleSelectDateForEdit(date.toLocaleDateString('sv-SE'));
   };
 
   return (
@@ -200,12 +222,12 @@ export const DailyTracker = () => {
             Lifestyle Tracker
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Record and review your hydration, sleep, exercise, and diet habits to maintain renal wellness.
+            Record and review daily observations about hydration, sleep, activity and food habits.
           </p>
         </div>
 
         {/* ─── Daily / Weekly / Monthly Tab Toggle ─────────────────────────────── */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 self-start sm:self-auto shrink-0">
+        <div className="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setActiveView('daily')}
@@ -250,6 +272,7 @@ export const DailyTracker = () => {
       {/* ──────────────────────────────────────────────────────────────────── */}
       {activeView === 'daily' && (
         <>
+          {historyError && <Alert variant="danger">{historyError} <Button size="sm" onClick={fetchRecent}>Retry</Button></Alert>}
           {success && (
             <Alert type="success" onClose={() => setSuccess('')}>
               {success}
@@ -266,6 +289,7 @@ export const DailyTracker = () => {
             {/* Daily entry form */}
             <div className="lg:col-span-2">
               <form onSubmit={handleSubmit} className="space-y-6">
+                <fieldset disabled={historyLoading || !!historyError} className="m-0 min-w-0 border-0 p-0">
                 <Card
                   title="Log Daily Habits"
                   subtitle="Track your key daily kidney-care metrics"
@@ -273,25 +297,23 @@ export const DailyTracker = () => {
                 >
                   <div className="space-y-5">
                     {/* Date selection (DD/MM/YYYY) */}
-                    <div>
-                      <DatePickerInput
-                        label="Log Date"
-                        name="activityDate"
-                        value={form.activityDate}
-                        onChange={handleChange}
-                        required
-                        helperText="Format: Day (DD) / Month (MM) / Year (YYYY)"
-                      />
+                    <div className="space-y-2">
+                      <Input label="Journal date" name="activityDate" type="date" value={form.activityDate} max={todayStr}
+                        onChange={(event) => handleSelectDateForEdit(event.target.value)} required />
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => shiftDate(-1)}>Previous day</Button>
+                        <Button size="sm" variant="secondary" disabled={form.activityDate >= todayStr} onClick={() => shiftDate(1)}>Next day</Button>
+                        <Button size="sm" variant="secondary" onClick={() => handleSelectDateForEdit(todayStr)}>Today</Button>
+                      </div>
                     </div>
 
                     {/* Hydration with quick-add buttons */}
                     <div className="p-4 rounded-xl bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900">
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-semibold text-sky-950 dark:text-sky-200 flex items-center gap-1.5">
+                        <label htmlFor="waterIntakeLiters" className="text-sm font-semibold text-sky-950 dark:text-sky-200 flex items-center gap-1.5">
                           <Droplet className="w-4 h-4 text-sky-600" />
                           Water Intake (Liters)
                         </label>
-                        <span className="text-xs text-sky-700 dark:text-sky-400 font-medium">Daily Target: 2.5 L</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Input
@@ -303,7 +325,6 @@ export const DailyTracker = () => {
                           value={form.waterIntakeLiters}
                           onChange={handleChange}
                           className="text-lg font-bold"
-                          required
                         />
                         <div className="flex gap-1.5 shrink-0">
                           <Button
@@ -346,6 +367,7 @@ export const DailyTracker = () => {
                           value={form.exerciseType}
                           onChange={handleChange}
                           options={[
+                            missingOption,
                             { value: 'Walking', label: 'Walking / Brisk Walk' },
                             { value: 'Running', label: 'Running / Jogging' },
                             { value: 'Gym', label: 'Gym / Strength' },
@@ -366,7 +388,6 @@ export const DailyTracker = () => {
                           onChange={handleChange}
                           min="0"
                           max="24"
-                          helperText="Optimal: 7 – 9 hours"
                         />
                         <Select
                           label="Sleep Quality"
@@ -374,6 +395,7 @@ export const DailyTracker = () => {
                           value={form.sleepQuality}
                           onChange={handleChange}
                           options={[
+                            missingOption,
                             { value: 'Restful', label: 'Restful / Undisturbed' },
                             { value: 'Average', label: 'Average' },
                             { value: 'Interrupted', label: 'Interrupted / Broken' },
@@ -398,7 +420,6 @@ export const DailyTracker = () => {
                           placeholder="e.g. 120"
                           min="40"
                           max="250"
-                          helperText="Normal resting: < 120 mmHg"
                         />
                         <Input
                           label="Diastolic BP (bottom number)"
@@ -409,7 +430,6 @@ export const DailyTracker = () => {
                           placeholder="e.g. 80"
                           min="30"
                           max="150"
-                          helperText="Normal resting: < 80 mmHg"
                         />
                       </div>
                     </div>
@@ -442,7 +462,8 @@ export const DailyTracker = () => {
                         value={form.saltLevel}
                         onChange={handleChange}
                         options={[
-                          { value: 'Low', label: 'Low (< 2g/day)' },
+                          missingOption,
+                          { value: 'Low', label: 'Low' },
                           { value: 'Medium', label: 'Medium' },
                           { value: 'High', label: 'High (salty meals)' },
                         ]}
@@ -464,7 +485,6 @@ export const DailyTracker = () => {
                         value={form.weightKg}
                         onChange={handleChange}
                         min="10"
-                        helperText="For fluid balance"
                       />
                     </div>
 
@@ -475,19 +495,8 @@ export const DailyTracker = () => {
                         { name: 'smoking', label: 'Smoked today' },
                         { name: 'alcohol', label: 'Consumed alcohol' },
                       ].map(({ name, label }) => (
-                        <label
-                          key={name}
-                          className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            name={name}
-                            checked={form[name]}
-                            onChange={handleChange}
-                            className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-                          />
-                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{label}</span>
-                        </label>
+                        <Select key={name} name={name} label={label} value={form[name]} onChange={handleChange}
+                          options={[missingOption, { value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }]} />
                       ))}
                     </div>
 
@@ -499,6 +508,7 @@ export const DailyTracker = () => {
                         value={form.stressLevel}
                         onChange={handleChange}
                         options={[
+                          missingOption,
                           { value: 'Low', label: 'Low / Relaxed' },
                           { value: 'Medium', label: 'Medium / Manageable' },
                           { value: 'High', label: 'High / Stressed' },
@@ -556,6 +566,7 @@ export const DailyTracker = () => {
                     </Button>
                   </div>
                 </Card>
+                </fieldset>
               </form>
             </div>
 
@@ -581,10 +592,10 @@ export const DailyTracker = () => {
                       >
                         <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-slate-100">
                           <span>{fmtDate(item.activityDate)}</span>
-                          <span className="text-sky-600 dark:text-sky-400">{item.waterIntakeLiters ? `${item.waterIntakeLiters} L` : '—'}</span>
+                          <span className="text-sky-600 dark:text-sky-400">{item.waterIntakeLiters != null ? `${item.waterIntakeLiters} L` : '—'}</span>
                         </div>
                         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>{item.exerciseMinutes ? `${item.exerciseMinutes}m` : '0m'} • {item.sleepHours ? `${item.sleepHours}h` : '0h'}</span>
+                          <span>{item.exerciseMinutes != null ? `${item.exerciseMinutes}m` : '—'} • {item.sleepHours != null ? `${item.sleepHours}h` : '—'}</span>
                           {item.systolicBp && item.diastolicBp && (
                             <span className="text-amber-600 dark:text-amber-400 font-medium">{item.systolicBp}/{item.diastolicBp}</span>
                           )}
@@ -632,6 +643,7 @@ export const DailyTracker = () => {
       {/* ──────────────────────────────────────────────────────────────────── */}
       {activeView === 'weekly' && (
         <div className="space-y-6">
+          <AssistantAction question="Summarize my lifestyle this week">Ask AI about this week’s journal</AssistantAction>
           <Card
             title="Weekly Lifestyle Summary"
             subtitle="Descriptive weekly habit observations (averages calculated only over recorded days)"
