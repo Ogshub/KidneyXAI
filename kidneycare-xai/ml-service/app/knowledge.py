@@ -51,9 +51,9 @@ def ingest():
                        (item["id"], item["id"], item["text"], name, len(vector), vector_literal(vector)))
 
 
-def retrieve(query):
+def retrieve(query, *, research=False):
     vocabulary = set(re.findall(r"[a-z]+", query.lower())) - {"what", "is", "my", "for", "the", "a", "of", "how", "does"}
-    docs = documents()
+    docs = {key: item for key, item in documents().items() if research or not item.get("researchOnly")}
     relevant = {key: len(vocabulary.intersection(item["tags"].split())) for key, item in docs.items()}
     if os.getenv("ASSISTANT_RETRIEVER", "fixture") == "fixture":
         return [docs[key] for key in sorted(docs, key=lambda key: (-relevant[key], key)) if relevant[key]][:3]

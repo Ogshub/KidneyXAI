@@ -33,6 +33,7 @@ services:
     environment:
       MODEL_PATH: /app/models
       LOG_LEVEL: info
+      ML_INTERNAL_SECRET: ${ML_INTERNAL_SECRET:-}
     volumes:
       - ./ml-service/models:/app/models
     healthcheck:
@@ -54,7 +55,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/kidneycare
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-kidneycare}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-kidneycare_secret}
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-kidneycare-xai-2026}
+      JWT_SECRET: ${JWT_SECRET:?Initialize stable local authentication secrets before starting Compose}
+      ML_INTERNAL_SECRET: ${ML_INTERNAL_SECRET:-}
       ML_SERVICE_URL: http://ml-service:8000
     depends_on:
       db:

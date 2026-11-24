@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Card } from '../components/common';
-import client from '../api/client';
+import { assistantApi } from '../api/assistant';
 
-const api = '/assistant';
 const actions = {
   '/reports': 'Medical reports', '/lab-history': 'Laboratory history', '/tracker': 'Daily tracker',
   '/profile': 'Health profile', '/recommendations': 'Educational recommendations',
@@ -101,7 +100,7 @@ export default function Assistant() {
   useEffect(() => {
     const abort = new AbortController();
     initialLoad.current = abort;
-    client.get(`${api}/conversations`, { signal: abort.signal }).then(({ data }) => {
+    assistantApi.list({ signal: abort.signal }).then((data) => {
       if (!abort.signal.aborted) setList(data);
     }).catch(() => {
       if (!abort.signal.aborted) setError('Conversation history could not be loaded.');
@@ -119,10 +118,10 @@ export default function Assistant() {
     } finally { setBusy(false); }
   };
   const reset = () => { setActive(null); setTurns([]); setValue(''); setConfirmDelete(false); setError(''); };
-  const refresh = async () => setList((await client.get(`${api}/conversations`)).data);
+  const refresh = async () => setList(await assistantApi.list());
   const send = () => run(async () => {
     const question = value.trim();
-    const { data } = await client.post(`${api}/chat`, { message: question, conversationId: active }, { _retried: true });
+    const data = await assistantApi.chat(question, active);
     setTurns((items) => [...items, { question, response: data }]);
     setActive(data.conversationId);
     setValue('');
@@ -137,7 +136,7 @@ export default function Assistant() {
     {error && <Alert variant="danger">{error}</Alert>}
     <div className="grid gap-4 md:grid-cols-[15rem_minmax(0,1fr)]">
       <ConversationSidebar list={list} active={active} disabled={busy} onNew={reset} onOpen={(id) => run(async () => {
-        const { data } = await client.get(`${api}/conversations/${id}`);
+        const data = await assistantApi.history(id);
         setActive(id); setTurns(data); setConfirmDelete(false);
       })} />
       <section className="space-y-4" aria-label="Assistant chat">
@@ -146,7 +145,7 @@ export default function Assistant() {
         <ChatInput value={value} onChange={setValue} onSubmit={send} busy={busy} />
         {active && (confirmDelete ? <div className="flex gap-2 flex-wrap">
           <Button variant="danger" disabled={busy} onClick={() => run(async () => {
-            await client.delete(`${api}/conversations/${active}`, { _retried: true });
+            await assistantApi.remove(active);
             reset(); await refresh();
           })}>Confirm delete conversation</Button>
           <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Keep conversation</Button>

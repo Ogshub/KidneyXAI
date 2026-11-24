@@ -27,6 +27,8 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    static final String INVALID_SESSION = JwtAuthenticationFilter.class.getName() + ".invalidSession";
+
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -45,38 +47,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        final String jwt = authHeader.substring(7);
-
+        String email;
         try {
-            final String email = jwtService.extractEmail(jwt);
-
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // Verify user exists in database
-                var userEntity = userRepository.findByEmail(email);
-
-                if (userEntity.isPresent() && jwtService.isTokenValid(jwt, email)) {
-                    UserDetails userDetails = User.builder()
-                            .username(email)
-                            .password(userEntity.get().getPasswordHash())
-                            .authorities(Collections.emptyList())
-                            .build();
-
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities()
-                            );
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
-            }
-        } catch (Exception e) {
-            // Invalid token — don't set authentication, proceed as unauthenticated
-            logger.debug("JWT validation failed: " + e.getMessage());
+            email = jwtService.authenticatedEmail(authHeader.substring(7));
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            request.setAttribute(INVALID_SESSION, true);
+            filterChain.doFilter(request, response);
+            return;
         }
 
+        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            var userEntity = userRepository.findByEmail(email);
+            if (userEntity.isPresent()) {
+                UserDetails userDetails = User.builder()
+                        .username(email)
+                        .password(userEntity.get().getPasswordHash())
+                        .authorities(Collections.emptyList())
+                        .build();
+                var authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                request.setAttribute(INVALID_SESSION, true);
+            }
+        }
         filterChain.doFilter(request, response);
     }
 }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api';
+import { TOKEN_KEY, USER_KEY, clearStoredSession } from './sessionStorage';
 
 const AuthContext = createContext(null);
 
@@ -10,16 +11,15 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      const savedToken = localStorage.getItem('kidneycare_token');
-      const savedUser = localStorage.getItem('kidneycare_user');
+      const savedToken = localStorage.getItem(TOKEN_KEY);
+      const savedUser = localStorage.getItem(USER_KEY);
       if (savedToken && savedUser) {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
       }
     } catch (err) {
       console.error('Failed to restore auth session:', err);
-      localStorage.removeItem('kidneycare_token');
-      localStorage.removeItem('kidneycare_user');
+      clearStoredSession();
     } finally {
       setLoading(false);
     }
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
     };
     setToken(data.token);
     setUser(userData);
-    localStorage.setItem('kidneycare_token', data.token);
-    localStorage.setItem('kidneycare_user', JSON.stringify(userData));
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
     return data;
   };
 
@@ -50,22 +50,21 @@ export const AuthProvider = ({ children }) => {
     };
     setToken(data.token);
     setUser(userData);
-    localStorage.setItem('kidneycare_token', data.token);
-    localStorage.setItem('kidneycare_user', JSON.stringify(userData));
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(USER_KEY, JSON.stringify(userData));
     return data;
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('kidneycare_token');
-    localStorage.removeItem('kidneycare_user');
+    clearStoredSession();
   };
 
   const updateUser = (userData) => {
     setUser((prev) => {
       const updated = { ...prev, ...userData };
-      localStorage.setItem('kidneycare_user', JSON.stringify(updated));
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
       return updated;
     });
   };

@@ -150,6 +150,10 @@ CREATE TABLE IF NOT EXISTS research_responses (
     aware_risk_factors      BOOLEAN,
     monitors_bp             BOOLEAN,
     received_kidney_info    BOOLEAN,
+    shap_comprehension_score INTEGER,
+    narrative_preference_score INTEGER,
+    guideline_trust_score INTEGER,
+    actionability_score INTEGER,
 
     created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

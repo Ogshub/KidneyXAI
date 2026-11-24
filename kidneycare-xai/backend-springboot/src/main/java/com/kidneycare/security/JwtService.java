@@ -1,7 +1,8 @@
 package com.kidneycare.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
+import jakarta.annotation.PostConstruct;
+import java.nio.charset.StandardCharsets;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,21 @@ public class JwtService {
 
     @Value("${jwt.expiration-ms}")
     private long expirationMs;
+
+    private SecretKey signingKey;
+
+    @PostConstruct
+    void initializeSigningKey() {
+        signingKey = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    String authenticatedEmail(String token) {
+        Claims claims = extractAllClaims(token);
+        if (claims.getExpiration() == null || claims.getSubject() == null || claims.getSubject().isBlank()) {
+            throw new MalformedJwtException("Required JWT claims are missing");
+        }
+        return claims.getSubject();
+    }
 
     /**
      * Extract the email (subject) from a JWT token.
@@ -85,9 +101,6 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(
-                java.util.Base64.getEncoder().encodeToString(secretKey.getBytes())
-        );
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
 }

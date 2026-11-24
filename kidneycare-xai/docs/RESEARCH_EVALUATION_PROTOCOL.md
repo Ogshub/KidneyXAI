@@ -392,3 +392,17 @@ python scripts/generate_research_report.py
 ---
 
 *End of RESEARCH_EVALUATION_PROTOCOL.md*
+
+## Phase 5 execution amendments
+
+The research CLI under `research/experiments/` is separate from the patient-facing Spring and FastAPI routes. M1 calls the same configured generative model as M2–M4 with the synthetic question alone. M2 adds retrieved public evidence. M3 adds synthetic observations without rubric labels. M4 applies research-only completeness, chronology, consistency and evidence checks. The bounded assistant is recorded separately because it uses deterministic patient projections and excerpt selection.
+
+All four incremental configurations use a shared task instruction, structured decision/answer/citation contract and generation settings. Ablations toggle one check at a time. The automatic consistency check detects out-of-context numeric tokens. Clinical correctness and semantic citation support require independent annotation. The evidence check for educational responses conservatively requires a reviewed excerpt as the final wording. Its effect on coverage should be reported.
+
+The checked-in frozen cases and development cases have distinct SHA-256 hashes. Related variants carry case-family identifiers. Paired risk differences use a family bootstrap, and exact McNemar with Holm-adjusted primary comparisons is reported only when the paired samples have distinct families. Report decision accuracy with answer coverage, unnecessary refusal and inappropriate answers. Missing independent clinical judgments are represented as null, and transport failures are distinct from abstentions.
+
+Use `python research/experiments/benchmark.py research/benchmark/development_cases.json <fixture-output> --provider fixture` from the application directory to exercise the harness. Fixture outcomes are software checks. For the live pilot, set an authorized `GEMINI_API_KEY`, select the verified local pgvector index, pass `--provider gemini --model <approved-model> --pilot 1` and retain returned model versions and token usage. Final live runs require qualified review and explicit owner approval. Use `python research/experiments/analyze.py <run> <report-output>` to summarize a run and generate the blinded annotation worksheet and a separate configuration key.
+
+Study labels in the Phase 5 handoff assign individual PCER ablations to Study C and external validation to Study D. Earlier sections use the original labels. External results are reported only after verifying cohort terms, target definitions and common measurement semantics.
+
+The UCI cohort has already informed project development. A fresh split with fold-local preprocessing and calibration enforces separation within the new study, while the results remain an internal benchmark and need independent external validation.

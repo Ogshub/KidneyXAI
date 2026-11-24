@@ -22,6 +22,9 @@ import {
 import { Card, Button, Badge, Spinner, Alert } from '../components/common';
 import { ShapBarChart } from '../components/charts';
 
+const calibrationFiles = import.meta.glob('../../../research/results/calibration_report.json', { eager: true, import: 'default' });
+const calibration = Object.values(calibrationFiles)[0];
+
 export const ResearchAnalytics = () => {
   const { isBrutalist } = useTheme();
   const [analytics, setAnalytics] = useState(null);
@@ -33,7 +36,7 @@ export const ResearchAnalytics = () => {
     try {
       setLoading(true);
       setError('');
-      const [analyticsData, evalData] = await Promise.all([
+      const [analyticsData, evalData] = await Promise.allSettled([
         researchApi.getAnalytics(),
         assessmentApi.getModelEvaluation(),
       ]);
@@ -118,6 +121,13 @@ export const ResearchAnalytics = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
+      <Card className="space-y-2">
+        <h2 className="text-xl font-bold">Phase 5 research studies</h2>
+        <p>The frozen synthetic benchmark contains 150 cases across six categories. Live M1–M4 comparisons, per-category findings and PCER ablation outcomes are pending.</p>
+        <p>Native retrieval verification, authorized provider access and qualified review are prerequisites for live evaluation.</p>
+        {calibration?.methods ? <><p>UCI CKD calibration used a {calibration.development_n}-record development split and a {calibration.evaluation_n}-record holdout. Split seed {calibration.seed}.</p><ul className="list-disc pl-5">{Object.entries(calibration.methods).map(([name, result]) => <li key={name}>{name} · Brier {result.metrics.brier.toFixed(4)} · log loss {result.metrics.log_loss.toFixed(4)} · ECE {result.metrics.positive_class_ece.toFixed(4)}</li>)}</ul><p>The cohort previously informed development. These are internal estimates.</p></>
+          : <p>Calibration results are unavailable.</p>}
+      </Card>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

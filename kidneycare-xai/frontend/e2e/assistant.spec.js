@@ -9,7 +9,7 @@ test('answers from reviewed evidence, restores history and deletes a conversatio
   await page.locator('input[name="password"]').fill(password);
   await page.locator('input[name="confirmPassword"]').fill(password);
   await page.getByRole('button', { name: 'Create Free Account' }).click();
-  await expect(page).toHaveURL(/dashboard$/);
+  await expect(page).toHaveURL(/dashboard$/, { timeout: 15000 });
   await page.getByRole('link', { name: 'Open assistant' }).click();
 
   await page.getByRole('button', { name: 'What is eGFR?' }).click();

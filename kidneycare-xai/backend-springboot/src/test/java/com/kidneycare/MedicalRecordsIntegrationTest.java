@@ -180,7 +180,7 @@ class MedicalRecordsIntegrationTest {
         long second = body(send(post("/api/reports"), a, Map.of("reportType", "bloodwork", "reportDate", day.plusDays(1))), 201)
                 .path("id").asLong();
         String secondPath = "/api/reports/" + second;
-        mvc.perform(get(firstPath)).andExpect(status().isForbidden());
+        mvc.perform(get(firstPath)).andExpect(status().isUnauthorized());
         mvc.perform(get(firstPath).header("Authorization", b)).andExpect(status().isNotFound());
         mvc.perform(delete(firstPath).header("Authorization", b)).andExpect(status().isNotFound());
         assertEquals(0, body(mvc.perform(get("/api/reports").header("Authorization", b)), 200).path("totalElements").asInt());
@@ -189,7 +189,7 @@ class MedicalRecordsIntegrationTest {
 
         String signed = "/api" + body(mvc.perform(get(firstPath + "/file-link").header("Authorization", a)), 200)
                 .path("path").asText();
-        mvc.perform(get(java.net.URI.create(signed))).andExpect(status().isForbidden());
+        mvc.perform(get(java.net.URI.create(signed))).andExpect(status().isUnauthorized());
         mvc.perform(get(java.net.URI.create(signed)).header("Authorization", b)).andExpect(status().isNotFound());
         mvc.perform(get(java.net.URI.create(signed.replaceFirst("expires=[0-9]+", "expires=1"))).header("Authorization", a))
                 .andExpect(status().isNotFound());
@@ -291,7 +291,7 @@ class MedicalRecordsIntegrationTest {
         jdbc.execute(v4);
         body(mvc.perform(get("/api/reports/" + report).header("Authorization", owner)), 200);
 
-        mvc.perform(get("/api/assistant/conversations")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/assistant/conversations")).andExpect(status().isUnauthorized());
         var response = body(send(post("/api/assistant/chat"), owner, Map.of("message", "What is eGFR?")), 200);
         String id = response.path("conversationId").asText();
         String message = response.path("messageId").asText();
@@ -305,6 +305,39 @@ class MedicalRecordsIntegrationTest {
         mvc.perform(delete(path).header("Authorization", owner)).andExpect(status().isNoContent());
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM ai_audit_logs WHERE message_id=?::uuid", Integer.class, message));
         mvc.perform(get(path).header("Authorization", owner)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void v5ReplayLeavesMissingSurveyScoresUnreported() throws Exception {
+        String migration = Files.readString(SQL.resolve("migration_v5.sql"));
+        jdbc.execute(migration);
+        jdbc.execute(migration);
+        var analytics = body(mvc.perform(get("/api/research/analytics")), 200);
+        assertEquals(0, analytics.path("totalResponses").asInt());
+        assertTrue(analytics.path("meanActionability").isNull());
+        assertTrue(analytics.path("meanShapComprehension").isNull());
+    }
+
+    @Test
+    void missingExpiredAndWrongKeyTokensUseAuthenticationErrors() throws Exception {
+        var expiry = java.util.Date.from(java.time.Instant.now().minusSeconds(60));
+        var signingKey = io.jsonwebtoken.security.Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8));
+        var expired = io.jsonwebtoken.Jwts.builder().subject("synthetic@example.test")
+                .expiration(expiry).signWith(signingKey).compact();
+        var otherKey = io.jsonwebtoken.Jwts.SIG.HS256.key().build();
+        var stale = io.jsonwebtoken.Jwts.builder().subject("synthetic@example.test")
+                .expiration(java.util.Date.from(java.time.Instant.now().plusSeconds(60))).signWith(otherKey).compact();
+        mvc.perform(get("/api/dashboard"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        for (var token : java.util.List.of(expired, stale)) {
+            mvc.perform(get("/api/dashboard").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("SESSION_EXPIRED"));
+            mvc.perform(get("/api/assessments").header("Authorization", "Bearer " + token))
+                    .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("SESSION_EXPIRED"));
+            mvc.perform(post("/api/assistant/chat").header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"What is eGFR?\"}"))
+                    .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("SESSION_EXPIRED"));
+        }
     }
 
     private String register() throws Exception {

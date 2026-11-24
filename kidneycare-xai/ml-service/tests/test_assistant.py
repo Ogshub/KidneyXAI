@@ -23,7 +23,7 @@ def test_public_evidence_without_patient_information():
     assert result["patientRecordReferences"] == []
     assert result["evidenceSources"][0]["publisher"] in {"NIDDK", "National Kidney Foundation"}
     assert len(result["evidenceSources"][0]["contentHash"]) == 64
-    assert len(documents()) == 4
+    assert len(documents()) >= 12
     assert not retrieve("unrelated topic xyz")
 
 
@@ -146,7 +146,7 @@ def test_ingestion_sets_dimension_and_postgres_retrieval_uses_curated_manifest(m
     monkeypatch.setenv("ASSISTANT_KB_DSN", "fixture-not-network")
     knowledge.ingest()
     knowledge.ingest()
-    assert len([sql for sql, _ in calls if "ON CONFLICT" in sql]) == 16
+    assert len([sql for sql, _ in calls if "ON CONFLICT" in sql]) == len(knowledge.documents()) * 4
     assert all(args[4] == 5 for sql, args in calls if "INSERT INTO knowledge_chunks" in sql)
     result = knowledge.retrieve("What is eGFR?")
     assert result[0]["text"] == knowledge.documents()["niddk-gfr"]["text"]

@@ -61,10 +61,10 @@ public class ResearchService {
                     .ageDistribution(java.util.Collections.emptyMap())
                     .hydrationDistribution(java.util.Collections.emptyMap())
                     .exerciseDistribution(java.util.Collections.emptyMap())
-                    .meanShapComprehension(0.0)
-                    .meanNarrativePreference(0.0)
-                    .meanGuidelineTrust(0.0)
-                    .meanActionability(0.0)
+                    .meanShapComprehension(null)
+                    .meanNarrativePreference(null)
+                    .meanGuidelineTrust(null)
+                    .meanActionability(null)
                     .awarenessEarlySymptomsPercent(0.0)
                     .awarenessRiskFactorsPercent(0.0)
                     .monitorsBpPercent(0.0)
@@ -91,22 +91,22 @@ public class ResearchService {
         double avgShap = responses.stream()
                 .filter(r -> r.getShapComprehensionScore() != null)
                 .mapToInt(ResearchResponse::getShapComprehensionScore)
-                .average().orElse(4.0);
+                .average().orElse(Double.NaN);
 
         double avgNarrative = responses.stream()
                 .filter(r -> r.getNarrativePreferenceScore() != null)
                 .mapToInt(ResearchResponse::getNarrativePreferenceScore)
-                .average().orElse(4.0);
+                .average().orElse(Double.NaN);
 
         double avgTrust = responses.stream()
                 .filter(r -> r.getGuidelineTrustScore() != null)
                 .mapToInt(ResearchResponse::getGuidelineTrustScore)
-                .average().orElse(4.5);
+                .average().orElse(Double.NaN);
 
         double avgAction = responses.stream()
                 .filter(r -> r.getActionabilityScore() != null)
                 .mapToInt(ResearchResponse::getActionabilityScore)
-                .average().orElse(4.5);
+                .average().orElse(Double.NaN);
 
         double earlySymptomsPct = responses.stream().filter(r -> Boolean.TRUE.equals(r.getAwareEarlySymptoms())).count() * 100.0 / total;
         double riskFactorsPct = responses.stream().filter(r -> Boolean.TRUE.equals(r.getAwareRiskFactors())).count() * 100.0 / total;
@@ -119,10 +119,10 @@ public class ResearchService {
                 .ageDistribution(ageDist)
                 .hydrationDistribution(hydrationDist)
                 .exerciseDistribution(exerciseDist)
-                .meanShapComprehension(Math.round(avgShap * 10.0) / 10.0)
-                .meanNarrativePreference(Math.round(avgNarrative * 10.0) / 10.0)
-                .meanGuidelineTrust(Math.round(avgTrust * 10.0) / 10.0)
-                .meanActionability(Math.round(avgAction * 10.0) / 10.0)
+                .meanShapComprehension(Double.isNaN(avgShap) ? null : Math.round(avgShap * 10.0) / 10.0)
+                .meanNarrativePreference(Double.isNaN(avgNarrative) ? null : Math.round(avgNarrative * 10.0) / 10.0)
+                .meanGuidelineTrust(Double.isNaN(avgTrust) ? null : Math.round(avgTrust * 10.0) / 10.0)
+                .meanActionability(Double.isNaN(avgAction) ? null : Math.round(avgAction * 10.0) / 10.0)
                 .awarenessEarlySymptomsPercent(Math.round(earlySymptomsPct * 10.0) / 10.0)
                 .awarenessRiskFactorsPercent(Math.round(riskFactorsPct * 10.0) / 10.0)
                 .monitorsBpPercent(Math.round(monitorsBpPct * 10.0) / 10.0)

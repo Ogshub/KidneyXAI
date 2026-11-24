@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SESSION_EXPIRED_MESSAGE } from '../context/sessionStorage';
 import { useTheme } from '../context/ThemeContext';
 import { Alert } from '../components/common';
 import {
@@ -54,7 +55,7 @@ export const Login = () => {
       await login({ email: formData.email.trim(), password: formData.password });
       navigate(from, { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
+
       let msg = 'Invalid email or password. Please check your credentials and try again.';
       if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
         msg = 'The cloud server took longer to respond while spinning up from sleep. It is now warm — please click Sign In again!';
@@ -346,6 +347,9 @@ export const Login = () => {
           </div>
 
           {/* Error display */}
+          {new URLSearchParams(location.search).get('reason') === 'session-expired' && (
+            <Alert variant="warning">{SESSION_EXPIRED_MESSAGE}</Alert>
+          )}
           {error && (
             <Alert type="danger" className="mb-5" onClose={() => setError('')}>
               {error}
