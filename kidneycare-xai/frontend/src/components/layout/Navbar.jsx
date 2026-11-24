@@ -39,6 +39,7 @@ export const Navbar = () => {
         { name: 'Recommendations', path: '/recommendations', icon: Compass },
         { name: 'History', path: '/history', icon: History },
         { name: 'Medical Reports', path: '/reports', icon: FileText },
+        { name: 'Assistant', path: '/assistant' },
         { name: 'Evaluation Analytics', path: '/analytics', icon: Award },
       ]
     : [

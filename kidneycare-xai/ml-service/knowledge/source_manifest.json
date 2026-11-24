@@ -1,0 +1,62 @@
+[
+  {
+    "id": "niddk-gfr",
+    "title": "Chronic Kidney Disease Tests & Diagnosis",
+    "publisher": "NIDDK",
+    "url": "https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/tests-diagnosis",
+    "revision": "Last reviewed October 2016",
+    "version": "web snapshot reviewed 2026-11-24",
+    "section": "Blood Test for GFR",
+    "page": null,
+    "reviewedOn": "2026-11-24",
+    "usage": "Original educational paraphrase with attribution. Publisher text and PDFs are excluded.",
+    "tags": "creatinine gfr egfr filtration blood test kidney function",
+    "text": "Clinicians can estimate kidney filtration from a blood test that measures creatinine. The estimate is called eGFR. A clinician interprets the result in the context of other findings.",
+    "contentHash": "d56122ae4de47262113b754522c834d22b8dd43d1c20f837b73316e3be3287e2"
+  },
+  {
+    "id": "niddk-albumin",
+    "title": "Chronic Kidney Disease Tests & Diagnosis",
+    "publisher": "NIDDK",
+    "url": "https://www.niddk.nih.gov/health-information/kidney-disease/chronic-kidney-disease-ckd/tests-diagnosis",
+    "revision": "Last reviewed October 2016",
+    "version": "web snapshot reviewed 2026-11-24",
+    "section": "Urine Test for Albumin",
+    "page": null,
+    "reviewedOn": "2026-11-24",
+    "usage": "Original educational paraphrase with attribution. Publisher text and PDFs are excluded.",
+    "tags": "albumin protein urine acr uacr",
+    "text": "A urine albumin-to-creatinine ratio measures albumin relative to creatinine in urine. A clinician may repeat urine testing to confirm a finding.",
+    "contentHash": "173ca5f3ee5ae446c9c4d99d654357c81f74e0685a85ccfed17360abd0ffa7d8"
+  },
+  {
+    "id": "nkf-egfr",
+    "title": "Estimated Glomerular Filtration Rate (eGFR)",
+    "publisher": "National Kidney Foundation",
+    "url": "https://www.kidney.org/kidney-topics/estimated-glomerular-filtration-rate-egfr",
+    "revision": "2026-02-05",
+    "version": "web snapshot reviewed 2026-11-24",
+    "section": "About estimated glomerular rate (eGFR); Types of GFR Tests",
+    "page": null,
+    "reviewedOn": "2026-11-24",
+    "usage": "Original educational paraphrase with attribution. Publisher text and PDFs are excluded.",
+    "tags": "egfr estimated glomerular filtration creatinine",
+    "text": "Estimated glomerular filtration rate describes how well the kidneys filter blood. Creatinine and sometimes cystatin C inform the estimate. Discuss interpretation of your results with your healthcare team.",
+    "contentHash": "a8a973cdc7ce9f03b385ab3caed8330d09e76353c02578e8ff8b4e0090e44fa5"
+  },
+  {
+    "id": "kdigo-ckd",
+    "title": "KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of CKD",
+    "publisher": "KDIGO",
+    "url": "https://kdigo.org/guidelines/ckd-evaluation-and-management/",
+    "revision": "2024",
+    "version": "2024",
+    "section": "Chapter 1, Evaluation of CKD",
+    "page": null,
+    "reviewedOn": "2026-11-24",
+    "usage": "Original educational paraphrase with attribution. Publisher text and PDFs are excluded.",
+    "tags": "ckd chronic kidney diagnosis chronicity",
+    "text": "Evaluating possible chronic kidney disease includes considering kidney filtration, markers such as albumin in urine, and whether abnormalities persist over time. A single measurement does not establish chronicity.",
+    "contentHash": "4542ac69437b5264682ade99b1526db333f29fe23d7247264206afea9ac31c8c"
+  }
+]

@@ -80,6 +80,7 @@ export const Dashboard = () => {
       <Card>
         <h2 className="font-bold mb-2">Medical records</h2>
         <div className="flex flex-wrap gap-4">
+          <Link className="underline" to="/assistant">Open assistant</Link>
           <Link className="underline" to="/reports">Manage reports</Link>
           <Link className="underline" to="/lab-history">View laboratory history</Link>
           <Link className="underline" to="/report-comparison">Compare reports</Link>

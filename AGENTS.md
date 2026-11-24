@@ -74,7 +74,7 @@ Onboarding evidence, 24 November 2026:
 
 Accept with two synthetic accounts, valid PDF/image and metadata-only reports, manual records, parameter trends and compatible-unit comparisons. Verify rejection of unsupported uploads, invalid values, incompatible deltas and cross-account access. Verify deletion removes lab rows and the stored object or leaves a recoverable state. Run regression checks for assessment and tracker.
 
-### Phase 4 — AI assistant, RAG and PCER (planned)
+### Phase 4 — AI assistant, RAG and PCER
 
 Accept curated versioned guideline retrieval in pgvector, authenticated context tools, and persisted per-user conversation turns and sources. Verify ANSWER, CLARIFY and ABSTAIN with evidence and decision rationale, stale/missing/conflicting records, unsupported claims, urgent cases and unsafe requests. Ensure prompt content and retrieved documents cannot override access rules. Enable report and lab tools only after Phase 3 ownership is verified.
 

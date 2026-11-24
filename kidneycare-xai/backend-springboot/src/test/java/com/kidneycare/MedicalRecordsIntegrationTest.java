@@ -74,6 +74,7 @@ class MedicalRecordsIntegrationTest {
             statement.execute(Files.readString(SQL.resolve("migration_v2.sql")));
             statement.execute(Files.readString(SQL.resolve("migration_v3.sql")));
             statement.execute(Files.readString(SQL.resolve("migration_v3.sql")));
+            statement.execute(Files.readString(SQL.resolve("migration_v4.sql")));
         }
         registry.add("spring.datasource.url", () -> url(DB));
         registry.add("spring.datasource.username", MedicalRecordsIntegrationTest::username);
@@ -277,6 +278,33 @@ class MedicalRecordsIntegrationTest {
             assertFalse(recommendation.path("source").asText().isBlank());
             assertFalse(recommendation.path("createdAt").asText().isBlank());
         }
+    }
+
+    @Test
+    void v4PreservesMedicalDataAndDeletesOnlyOwnedConversations() throws Exception {
+        String owner = register();
+        String other = register();
+        long report = body(send(post("/api/reports"), owner,
+                Map.of("reportType", "bloodwork", "reportDate", LocalDate.now())), 201).path("id").asLong();
+        String v4 = Files.readString(SQL.resolve("migration_v4.sql"));
+        jdbc.execute(v4);
+        jdbc.execute(v4);
+        body(mvc.perform(get("/api/reports/" + report).header("Authorization", owner)), 200);
+
+        mvc.perform(get("/api/assistant/conversations")).andExpect(status().isForbidden());
+        var response = body(send(post("/api/assistant/chat"), owner, Map.of("message", "What is eGFR?")), 200);
+        String id = response.path("conversationId").asText();
+        String message = response.path("messageId").asText();
+        String path = "/api/assistant/conversations/" + id;
+        body(mvc.perform(get(path).header("Authorization", owner)), 200);
+        mvc.perform(get(path).header("Authorization", other)).andExpect(status().isNotFound());
+        mvc.perform(delete(path).header("Authorization", other)).andExpect(status().isNotFound());
+        send(post("/api/assistant/chat"), other, Map.of("message", "Follow-up", "conversationId", id))
+                .andExpect(status().isNotFound());
+        assertEquals(1, jdbc.queryForObject("SELECT count(*) FROM ai_audit_logs WHERE message_id=?::uuid", Integer.class, message));
+        mvc.perform(delete(path).header("Authorization", owner)).andExpect(status().isNoContent());
+        assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM ai_audit_logs WHERE message_id=?::uuid", Integer.class, message));
+        mvc.perform(get(path).header("Authorization", owner)).andExpect(status().isNotFound());
     }
 
     private String register() throws Exception {

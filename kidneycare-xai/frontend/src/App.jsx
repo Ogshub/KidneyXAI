@@ -1,4 +1,5 @@
 import React from 'react';
+import Assistant from './pages/Assistant';
 import { MedicalReports, ReportDetails, LabHistory, ReportComparison } from './pages/MedicalRecords';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -98,6 +99,7 @@ function App() {
                 }
               />
 
+              <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><MedicalReports /></ProtectedRoute>} />
               <Route path="/reports/:id" element={<ProtectedRoute><ReportDetails /></ProtectedRoute>} />
               <Route path="/lab-history" element={<ProtectedRoute><LabHistory /></ProtectedRoute>} />

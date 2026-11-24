@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .config import settings
+from .assistant import router as assistant_router
 from .model_loader import artifacts
 from .predictor import predict
 from .schemas import (
@@ -76,6 +77,8 @@ app.add_middleware(
 
 
 # ── SEC-02: Internal secret middleware ──
+app.include_router(assistant_router)
+
 @app.middleware("http")
 async def internal_secret_middleware(request: Request, call_next):
     """
