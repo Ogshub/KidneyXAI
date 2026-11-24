@@ -155,12 +155,20 @@ public class AssessmentService {
                     .collect(Collectors.toList());
         }
 
+        boolean isDemo = Boolean.TRUE.equals(mlResponse.getIsDemoMode()) ||
+                (assessment.getModelVersion() != null && assessment.getModelVersion().contains("demo"));
+        String explanationStatus = mlResponse.getExplanationStatus() != null
+                ? mlResponse.getExplanationStatus()
+                : (isDemo ? "demo" : "available");
+
         return AssessmentResponse.builder()
                 .id(assessment.getId())
                 .riskScore(assessment.getRiskScore())
                 .riskCategory(assessment.getRiskCategory())
                 .prediction(assessment.getPrediction())
                 .modelVersion(assessment.getModelVersion())
+                .isDemoMode(isDemo)
+                .explanationStatus(explanationStatus)
                 .createdAt(assessment.getCreatedAt())
                 .explanations(explanations)
                 .recommendations(recommendations)
@@ -178,12 +186,18 @@ public class AssessmentService {
                                 .build())
                         .collect(Collectors.toList());
 
+        boolean isLegacyOrFallback = assessment.getModelVersion() != null &&
+                (assessment.getModelVersion().contains("fallback") ||
+                 assessment.getModelVersion().contains("demo"));
+
         return AssessmentResponse.builder()
                 .id(assessment.getId())
                 .riskScore(assessment.getRiskScore())
                 .riskCategory(assessment.getRiskCategory())
                 .prediction(assessment.getPrediction())
                 .modelVersion(assessment.getModelVersion())
+                .isDemoMode(isLegacyOrFallback)
+                .explanationStatus(isLegacyOrFallback ? "legacy_unverified" : "available")
                 .createdAt(assessment.getCreatedAt())
                 .explanations(explanations)
                 .build();

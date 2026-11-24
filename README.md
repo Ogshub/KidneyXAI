@@ -402,7 +402,7 @@ python train_model.py
 
 # Expected output:
 # ✅ Training complete! All artifacts saved to models/
-# Accuracy: 98.50% | AUROC: 0.9920 | F1: 0.9840
+# Accuracy: 98.50% | AUROC: 0.9981 | F1: 0.9881
 ```
 
 ### Step 2: Start the ML Service

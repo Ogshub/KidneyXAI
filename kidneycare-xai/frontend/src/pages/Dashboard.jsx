@@ -2,16 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboardApi } from '../api';
-import { 
-  HeartPulse, 
-  Activity, 
-  Droplet, 
-  Moon, 
-  Flame, 
-  ArrowRight, 
-  PlusCircle, 
-  Sparkles, 
-  Calendar, 
+import {
+  HeartPulse,
+  Activity,
+  Droplet,
+  Moon,
+  Flame,
+  ArrowRight,
+  PlusCircle,
+  Sparkles,
+  Calendar,
   AlertCircle,
   HelpCircle,
   TrendingUp,
@@ -54,8 +54,8 @@ export const Dashboard = () => {
     );
   }
 
-  const riskScore = data?.currentRiskScore !== null && data?.currentRiskScore !== undefined 
-    ? Math.round(data.currentRiskScore > 1 ? data.currentRiskScore : data.currentRiskScore * 100) 
+  const riskScore = data?.currentRiskScore !== null && data?.currentRiskScore !== undefined
+    ? Math.round(data.currentRiskScore > 1 ? data.currentRiskScore : data.currentRiskScore * 100)
     : null;
 
   const riskCategory = data?.currentRiskCategory || (riskScore !== null ? (riskScore > 65 ? 'HIGH' : riskScore > 35 ? 'MODERATE' : 'LOW') : null);
@@ -136,21 +136,27 @@ export const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Lifestyle Score */}
+        {/* Journal Adherence & Activity */}
         <Card className="border-l-4 border-l-emerald-600 dark:border-l-emerald-400">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lifestyle Score</span>
-            <Badge variant="low" size="sm">Adherence</Badge>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Lifestyle Journal</span>
+            <Badge variant="teal" size="sm">
+              {data?.recordedDaysLast7 !== undefined ? `${data.recordedDaysLast7}/7 Days` : 'Weekly Log'}
+            </Badge>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">
-              {data?.lifestyleScore !== null && data?.lifestyleScore !== undefined ? data.lifestyleScore : '—'}
+              {data?.journalCompletionRate !== null && data?.journalCompletionRate !== undefined
+                ? `${Math.round(data.journalCompletionRate)}%`
+                : (data?.recordedDaysLast7 !== undefined ? `${Math.round((data.recordedDaysLast7 / 7) * 100)}%` : '—')}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">/ 100</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">adherence (7d)</span>
           </div>
           <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-            <span>Water, Sleep, Activity</span>
-            <Link to="/tracker" className="text-teal-600 dark:text-teal-400 hover:text-teal-700 font-semibold inline-flex items-center gap-1">
+            <span className="truncate max-w-[180px]" title={data?.descriptiveProgress || 'Daily habit logging'}>
+              {data?.descriptiveProgress || 'Habit observations recorded'}
+            </span>
+            <Link to="/tracker" className="text-teal-600 dark:text-teal-400 hover:text-teal-700 font-semibold inline-flex items-center gap-1 shrink-0">
               Log habits <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -164,16 +170,16 @@ export const Dashboard = () => {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-extrabold text-slate-900 dark:text-slate-100">
-              {data?.todayActivity?.waterIntakeLiters !== null && data?.todayActivity?.waterIntakeLiters !== undefined 
-                ? `${data.todayActivity.waterIntakeLiters} L` 
-                : '0 L'}
+              {data?.todayActivity?.waterIntakeLiters !== null && data?.todayActivity?.waterIntakeLiters !== undefined
+                ? `${data.todayActivity.waterIntakeLiters} L`
+                : 'Not recorded'}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">goal: 2.5 L</span>
+
           </div>
           <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-            <span>Kidney flush target</span>
+            <span>Journal entry</span>
             <span className="text-xs font-medium text-sky-600 dark:text-sky-400">
-              {data?.todayActivity?.waterIntakeLiters >= 2.5 ? '✓ Target Met' : 'Track intake'}
+              {data?.todayActivity?.waterIntakeLiters != null ? 'Recorded' : 'Track intake'}
             </span>
           </div>
         </Card>
@@ -187,14 +193,14 @@ export const Dashboard = () => {
           <div className="flex items-baseline gap-3">
             <div>
               <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {data?.todayActivity?.exerciseMinutes || 0}
+                {data?.todayActivity?.exerciseMinutes ?? '—'}
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">mins</span>
             </div>
             <span className="text-slate-300 dark:text-slate-600">•</span>
             <div>
               <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {data?.todayActivity?.sleepHours || 0}
+                {data?.todayActivity?.sleepHours ?? '—'}
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">hrs sleep</span>
             </div>

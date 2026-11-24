@@ -2,6 +2,7 @@ package com.kidneycare.controller;
 
 import com.kidneycare.dto.request.ActivityRequest;
 import com.kidneycare.dto.response.ActivityResponse;
+import com.kidneycare.dto.response.ActivitySummaryResponse;
 import com.kidneycare.service.ActivityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,5 +36,13 @@ public class ActivityController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(activityService.getActivities(auth.getName(), from, to));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<ActivitySummaryResponse> getActivitySummary(
+            Authentication auth,
+            @RequestParam(defaultValue = "weekly") String period,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(activityService.getSummary(auth.getName(), period, date));
     }
 }

@@ -69,14 +69,16 @@ CREATE TABLE IF NOT EXISTS assessment_features (
 
 CREATE INDEX idx_assessment_features_assessment_id ON assessment_features(assessment_id);
 
--- 5. Daily Activities (lifestyle tracking)
+-- 5. Daily Activities (lifestyle tracking & health observations)
 CREATE TABLE IF NOT EXISTS daily_activities (
     id                  BIGSERIAL       PRIMARY KEY,
     user_id             BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     activity_date       DATE            NOT NULL,
     water_intake_liters DOUBLE PRECISION,
     exercise_minutes    INTEGER,
+    exercise_type       VARCHAR(50),        -- Walking, Running, Gym, Yoga, Cycling, etc.
     sleep_hours         DOUBLE PRECISION,
+    sleep_quality       VARCHAR(30),        -- Restful, Average, Interrupted, Poor
     salt_level          VARCHAR(20),        -- Low / Medium / High
     fast_food           BOOLEAN         DEFAULT FALSE,
     sugary_drinks       INTEGER         DEFAULT 0,
@@ -84,6 +86,12 @@ CREATE TABLE IF NOT EXISTS daily_activities (
     alcohol             BOOLEAN         DEFAULT FALSE,
     weight_kg           DOUBLE PRECISION,
     stress_level        VARCHAR(20),        -- Low / Medium / High
+    systolic_bp         INTEGER,            -- Optional systolic blood pressure (mmHg)
+    diastolic_bp        INTEGER,            -- Optional diastolic blood pressure (mmHg)
+    medication_status   VARCHAR(30)     DEFAULT 'NOT_RECORDED', -- TAKEN_AS_PRESCRIBED / MISSED / PARTIALLY_TAKEN / NOT_APPLICABLE / NOT_RECORDED
+    symptoms            TEXT,               -- Optional user-reported observations
+    personal_notes      TEXT,               -- Private journal notes
+    doctor_restrictions TEXT,               -- Documented clinical restrictions (e.g. fluid limit)
     created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT uq_user_activity_date UNIQUE (user_id, activity_date)
@@ -92,19 +100,24 @@ CREATE TABLE IF NOT EXISTS daily_activities (
 CREATE INDEX idx_daily_activities_user_id ON daily_activities(user_id);
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 
--- 6. Recommendations (rule-engine output)
+-- 6. Recommendations (deterministic, traceable rule-engine output)
 CREATE TABLE IF NOT EXISTS recommendations (
-    id              BIGSERIAL       PRIMARY KEY,
-    assessment_id   BIGINT          NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
-    category        VARCHAR(50)     NOT NULL,   -- Diet / Exercise / Smoking / Hydration / Medical / etc.
-    trigger_reason  VARCHAR(255)    NOT NULL,   -- e.g. "Processed-food frequency = Daily"
-    recommendation  TEXT            NOT NULL,   -- The actual guidance text
-    priority        VARCHAR(20)     NOT NULL,   -- Low / Medium / High
-    source          VARCHAR(255),               -- Reference/guideline source
-    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                  BIGSERIAL       PRIMARY KEY,
+    assessment_id       BIGINT          NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+    rule_id             VARCHAR(50),                -- Stable identifier: RULE-HYDR-01, RULE-SOD-01, etc.
+    category            VARCHAR(50)     NOT NULL,   -- Diet / Exercise / Smoking / Hydration / Medical / etc.
+    trigger_reason      VARCHAR(255)    NOT NULL,   -- e.g. "Water intake = 1.0 L"
+    observation_period  VARCHAR(50),                -- e.g. "Latest Daily Entry", "Baseline Profile"
+    recommendation      TEXT            NOT NULL,   -- The educational guidance text
+    priority            VARCHAR(20)     NOT NULL,   -- Low / Medium / High / Urgent
+    source              VARCHAR(255),               -- Reference/guideline source (e.g. "KDIGO 2024")
+    known_limitations   TEXT,                       -- Educational boundaries and non-diagnostic caveats
+    contraindications   TEXT,                       -- Applicable clinical exclusions
+    created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_recommendations_assessment_id ON recommendations(assessment_id);
+CREATE INDEX idx_recommendations_rule_id ON recommendations(rule_id);
 
 -- 7. Research Responses (Dataset B — college study, fully decoupled)
 CREATE TABLE IF NOT EXISTS research_responses (

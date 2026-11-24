@@ -19,6 +19,8 @@ public class AssessmentResponse {
     private String riskCategory;
     private String prediction;
     private String modelVersion;
+    private Boolean isDemoMode;
+    private String explanationStatus;
     private LocalDateTime createdAt;
     private List<FeatureExplanationDto> explanations;
     private List<RecommendationResponse> recommendations;

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
 import { assessmentApi } from '../api';
-import { 
-  HeartPulse, 
-  Sparkles, 
-  ArrowLeft, 
-  CheckCircle2, 
-  HelpCircle, 
-  AlertTriangle, 
+import {
+  HeartPulse,
+  Sparkles,
+  ArrowLeft,
+  CheckCircle2,
+  HelpCircle,
+  AlertTriangle,
   BarChart3,
   Calendar,
   Share2,
@@ -94,6 +94,43 @@ export const AssessmentResult = () => {
           </Link>
         </div>
       </div>
+
+      {/* Status Warning Banners for Demo Mode or Legacy Explanations */}
+      {assessment.isDemoMode && (
+        <Alert type="warning">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <strong className="font-semibold block">Demonstration Mode Assessment</strong>
+              <span>This record was generated using demonstration parameters because the machine learning engine was in demo mode. It is not an authentic model inference and cannot be included in research evaluations.</span>
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      {assessment.explanationStatus === 'legacy_unverified' && (
+        <Alert type="info">
+          <div className="flex items-center gap-2">
+            <HelpCircle className="w-5 h-5 text-sky-600 shrink-0" />
+            <div>
+              <strong className="font-semibold block">Legacy / Unverified Attribution Notice</strong>
+              <span>This assessment was calculated with legacy explanation logic. Feature contributions may not reflect exact log-odds additivity under the current verified TreeSHAP mapping.</span>
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      {assessment.explanationStatus === 'explanation_unavailable' && (
+        <Alert type="danger">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div>
+              <strong className="font-semibold block">Attribution Unavailable</strong>
+              <span>SHAP feature attributions could not be verified for this assessment due to missing or unaligned transformer metadata.</span>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Hero Result Banner */}
       <div className={`p-8 rounded-3xl border ${riskTheme.border} ${riskTheme.bg} transition-all`}>
@@ -197,21 +234,21 @@ export const AssessmentResult = () => {
             <strong className="font-semibold text-slate-900">Interpretation Summary: </strong>
             {scorePercent >= 50 ? (
               <span>
-                The predictive model identified an <span className="font-semibold text-rose-600">elevated probability</span> of renal functional decline. 
+                The predictive model identified an <span className="font-semibold text-rose-600">elevated probability</span> of renal functional decline.
                 {assessment.explanations && assessment.explanations.length > 0 && (
                   <span>
                     {' '}The most substantial risk elevation stems from{' '}
                     <span className="font-medium text-slate-900 capitalize">
                       {(assessment.explanations[0]?.feature || assessment.explanations[0]?.featureName || 'primary marker').replace(/_/g, ' ')}
                     </span>{' '}
-                    (contributing <span className="font-mono text-rose-600 font-bold">+{Math.round((assessment.explanations[0]?.shapValue ?? 0) * 100)}%</span> to the risk index)
+                    (model margin attribution: <span className="font-mono text-rose-600 font-bold">{(assessment.explanations[0]?.shapValue ?? 0) >= 0 ? '+' : ''}{Number(assessment.explanations[0]?.shapValue ?? 0).toFixed(3)} log-odds</span>)
                     {assessment.explanations[1] && (
                       <span>
                         {' '}followed by{' '}
                         <span className="font-medium text-slate-900 capitalize">
                           {(assessment.explanations[1]?.feature || assessment.explanations[1]?.featureName || '').replace(/_/g, ' ')}
                         </span>
-                        {' '}(<span className="font-mono text-rose-600 font-bold">+{Math.round((assessment.explanations[1]?.shapValue ?? 0) * 100)}%</span>)
+                        {' '}(<span className="font-mono text-rose-600 font-bold">{(assessment.explanations[1]?.shapValue ?? 0) >= 0 ? '+' : ''}{Number(assessment.explanations[1]?.shapValue ?? 0).toFixed(3)} log-odds</span>)
                       </span>
                     )}.
                   </span>
@@ -219,7 +256,7 @@ export const AssessmentResult = () => {
               </span>
             ) : (
               <span>
-                The biochemical evaluation indicates a <span className="font-semibold text-emerald-600">low kidney risk profile</span>. 
+                The biochemical evaluation indicates a <span className="font-semibold text-emerald-600">low kidney risk profile</span>.
                 Current filtration markers and hemodynamic indicators reside within acceptable physiological baselines.
               </span>
             )}
@@ -228,8 +265,8 @@ export const AssessmentResult = () => {
           <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-600 flex items-start gap-2">
             <HelpCircle className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
             <div>
-              <strong className="text-slate-800">Why Bimodal XAI? </strong>
-              Recent clinical human-computer interaction studies (arXiv:2408.17401; PMC12427955) show non-expert users understand narrative synthesis significantly better than raw feature attribution charts alone.
+              <strong className="text-slate-800">Additivity & Mathematical Interpretation: </strong>
+              SHAP attribution values reflect additive contributions in the model's margin (log-odds) space: margin = base value + Σφᵢ, where predicted probability is the logistic sigmoid of the sum. SHAP values are directional contributions to the margin, not linear percentage shifts in probability.
             </div>
           </div>
         </div>

@@ -1,8 +1,11 @@
 """
-KidneyCare-XAI — Pydantic Request/Response Schemas
+KidneyCare-XAI — Pydantic Request/Response Schemas (Phase 2)
 
-Defines the contract between Spring Boot (MlService) and this Python service.
-Feature names will be finalized once Dataset A is selected.
+Changes from Phase 1:
+  - PredictionResponse: added isDemoMode field
+  - ModelInfoResponse: added isDemoMode field
+  - ModelEvaluationResponse: fully restructured — no hardcoded fields;
+    all metrics are Optional and sourced from evaluation_report.json
 """
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -14,7 +17,6 @@ class PredictionRequest(BaseModel):
     """
     Clinical features submitted for risk prediction.
     Field names match the trained model's expected feature names.
-    These will be updated once Dataset A (e.g. UCI CKD) is finalized.
     """
     age: float = Field(..., description="Patient age in years", ge=0, le=120)
     blood_pressure: float = Field(..., alias="bloodPressure", description="Blood pressure (mm/Hg)", ge=0)
@@ -72,7 +74,7 @@ class PredictionRequest(BaseModel):
 # ── Response ─────────────────────────────────────────────
 
 class FeatureExplanation(BaseModel):
-    """SHAP explanation for a single feature."""
+    """SHAP explanation for a single (original) feature."""
     feature: str
     value: float
     shap_value: float = Field(..., alias="shapValue")
@@ -85,6 +87,9 @@ class PredictionResponse(BaseModel):
     """
     ML prediction result with SHAP explanations.
     This is the contract that Spring Boot's MlService deserializes.
+
+    isDemoMode: true when no trained model is loaded — frontend should
+    display a prominent warning and must NOT persist demo results as research data.
     """
     risk_score: float = Field(..., alias="riskScore", description="Probability of CKD (0.0–1.0)")
     prediction: str = Field(..., description="ckd or notckd")
@@ -92,6 +97,13 @@ class PredictionResponse(BaseModel):
         ..., description="Per-feature SHAP values for this prediction, sorted by |SHAP| descending"
     )
     model_version: str = Field(..., alias="modelVersion")
+    is_demo_mode: bool = Field(False, alias="isDemoMode",
+                                description="True when predictions are synthetic — not from trained model")
+    explanation_status: str = Field(
+        "available",
+        alias="explanationStatus",
+        description="available | unavailable | demo — indicates reliability of SHAP values"
+    )
 
     class Config:
         populate_by_name = True
@@ -105,6 +117,7 @@ class ModelInfoResponse(BaseModel):
     global_feature_importance: list[FeatureExplanation] = Field(
         ..., alias="globalFeatureImportance"
     )
+    is_demo_mode: bool = Field(False, alias="isDemoMode")
 
     class Config:
         populate_by_name = True
@@ -121,18 +134,39 @@ class HealthResponse(BaseModel):
 
 
 class ModelEvaluationResponse(BaseModel):
-    """Evaluation metrics for the XGBoost model on validation cohort (H1)."""
-    model_version: str = Field(..., alias="modelVersion")
-    model_type: str = Field(..., alias="modelType")
-    dataset_name: str = Field(..., alias="datasetName")
-    accuracy: float
-    auroc: float
-    f1_score: float = Field(..., alias="f1Score")
-    precision: float
-    recall: float
-    cv_folds: int = Field(..., alias="cvFolds")
-    inference_latency_ms: float = Field(..., alias="inferenceLatencyMs")
-    top_global_features: list[FeatureExplanation] = Field(..., alias="topGlobalFeatures")
+    """
+    Structured evaluation metrics loaded from evaluation_report.json.
+    All metric fields are Optional — they are absent (not zero) when unavailable.
+    'status' indicates whether metrics are available, unavailable, or pending.
+
+    IMPORTANT: This schema replaces the previous hardcoded version.
+    No default numeric values are ever substituted for missing metrics.
+    """
+    status: str = Field(..., description="available | metrics_unavailable | demo")
+    model_version: Optional[str] = Field(None, alias="modelVersion")
+    model_type: Optional[str] = Field(None, alias="modelType")
+
+    # Dataset provenance
+    dataset_name: Optional[str] = Field(None, alias="datasetName")
+    dataset_record_count: Optional[int] = Field(None, alias="datasetRecordCount")
+    class_distribution: Optional[dict] = Field(None, alias="classDistribution")
+
+    # Validation protocol
+    validation_protocol: Optional[str] = Field(None, alias="validationProtocol")
+    cv_folds: Optional[int] = Field(None, alias="cvFolds")
+    training_date: Optional[str] = Field(None, alias="trainingDate")
+    artifact_hash: Optional[str] = Field(None, alias="artifactHash")
+
+    # Computed metrics — all Optional, never substituted with defaults
+    accuracy: Optional[float] = Field(None)
+    auroc: Optional[float] = Field(None)
+    f1_score: Optional[float] = Field(None, alias="f1Score")
+    precision: Optional[float] = Field(None)
+    recall: Optional[float] = Field(None)
+    specificity: Optional[float] = Field(None)
+
+    is_demo_mode: bool = Field(False, alias="isDemoMode")
+    top_global_features: Optional[list[FeatureExplanation]] = Field(None, alias="topGlobalFeatures")
 
     class Config:
         populate_by_name = True

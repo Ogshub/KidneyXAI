@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  HeartPulse, 
-  BrainCircuit, 
-  Activity, 
-  ShieldAlert, 
-  ArrowRight, 
-  LineChart, 
-  CheckCircle2, 
-  Sparkles, 
+import {
+  HeartPulse,
+  BrainCircuit,
+  Activity,
+  ShieldAlert,
+  ArrowRight,
+  LineChart,
+  CheckCircle2,
+  Sparkles,
   Layers,
   FileSpreadsheet
 } from 'lucide-react';
@@ -45,7 +45,7 @@ export const Landing = () => {
             </Link>
             <Link to="/analytics">
               <Button size="lg" variant="secondary" icon={FileSpreadsheet}>
-                Explore Multi-Cohort Analytics (3,047 Records)
+                Explore UCI Benchmark Analytics
               </Button>
             </Link>
           </div>
@@ -79,7 +79,7 @@ export const Landing = () => {
             <div className="text-xs font-bold text-teal-600 uppercase tracking-wider mb-1">01. Predict</div>
             <h3 className="text-lg font-bold text-slate-900 mb-2">Machine Learning</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Calibrated classifiers (XGBoost / Random Forest) trained on clinical markers like creatinine, urea, and albumin to evaluate kidney risk profile.
+              An XGBoost model trained on clinical markers like creatinine, urea, and albumin to evaluate kidney risk profile.
             </p>
           </div>
 
@@ -143,7 +143,7 @@ export const Landing = () => {
               </li>
               <li className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                <span>Composite Lifestyle Progress Score to track day-to-day adherence</span>
+                <span>Journal completion to track day-to-day recording</span>
               </li>
             </ul>
           </div>

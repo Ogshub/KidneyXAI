@@ -68,6 +68,12 @@ export const activityApi = {
     const res = await apiClient.get('/activities', { params });
     return res.data;
   },
+  getActivitySummary: async (period = 'weekly', date) => {
+    const params = { period };
+    if (date) params.date = date;
+    const res = await apiClient.get('/activities/summary', { params });
+    return res.data;
+  },
 };
 
 export const recommendationApi = {

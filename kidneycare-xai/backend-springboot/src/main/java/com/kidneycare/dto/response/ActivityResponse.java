@@ -17,7 +17,9 @@ public class ActivityResponse {
     private LocalDate activityDate;
     private Double waterIntakeLiters;
     private Integer exerciseMinutes;
+    private String exerciseType;
     private Double sleepHours;
+    private String sleepQuality;
     private String saltLevel;
     private Boolean fastFood;
     private Integer sugaryDrinks;
@@ -25,4 +27,10 @@ public class ActivityResponse {
     private Boolean alcohol;
     private Double weightKg;
     private String stressLevel;
+    private Integer systolicBp;
+    private Integer diastolicBp;
+    private String medicationStatus;
+    private String symptoms;
+    private String personalNotes;
+    private String doctorRestrictions;
 }

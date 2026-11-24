@@ -1,0 +1,28 @@
+{
+  "model_version": "1.0",
+  "model_type": "XGBClassifier",
+  "dataset": {
+    "name": "UCI Chronic Kidney Disease Benchmark (Apollo Hospitals, 2015)",
+    "record_count": 400,
+    "feature_count": 24,
+    "class_distribution": {
+      "ckd": 250,
+      "notckd": 150
+    }
+  },
+  "training": {
+    "validation_protocol": "10-Fold Stratified Cross-Validation",
+    "cv_folds": 10,
+    "random_state": 42
+  },
+  "metrics": {
+    "accuracy": 0.985,
+    "f1_score": 0.9881,
+    "precision": 0.9849,
+    "recall": 0.992,
+    "auroc": 0.9981,
+    "specificity": 0.9733
+  },
+  "artifact_hash": "model:e787c5f4b08c417e04fcd29a813929ee3d531256653495bbe973e55fa7c86c2d_prep:891f838c25117a3a16a2cbdce729fd0711bd62382bed760bee39c05f6869a892",
+  "status": "available"
+}

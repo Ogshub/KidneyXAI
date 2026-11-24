@@ -2,6 +2,7 @@ package com.kidneycare.service;
 
 import com.kidneycare.dto.request.AssessmentRequest;
 import com.kidneycare.dto.response.MlPredictionResponse;
+import com.kidneycare.exception.MlServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -16,23 +17,29 @@ import java.util.Map;
  * MlService — the ONLY class in the whole backend that speaks to Python.
  * Nothing else calls the ML service directly.
  *
- * Performance: Uses configured timeout, pre-built RestClient (singleton).
+ * Security: Passes internal shared secret via X-Internal-Secret header.
+ * Integrity: Does NOT fabricate synthetic predictions or SHAP values
+ * when the ML service is unreachable.
  */
 @Service
 @Slf4j
 public class MlService {
 
     private final RestClient restClient;
+    private final String internalSecret;
 
     public MlService(@Value("${ml.service.url}") String mlServiceUrl,
-                     @Value("${ml.service.timeout-ms}") long timeoutMs) {
+                     @Value("${ml.service.timeout-ms}") long timeoutMs,
+                     @Value("${ml.internal.secret:}") String internalSecret) {
+
+        this.internalSecret = internalSecret;
 
         // Configure HTTP client with explicit connect + read timeouts
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) Math.min(timeoutMs / 3, 10000)); // connect: max 10s
         factory.setReadTimeout((int) timeoutMs);                         // read: full timeout
 
-        // Ensure valid URI scheme (e.g. Render private host "kidneycare-ml-service:10000" needs "http://")
+        // Ensure valid URI scheme
         String normalizedUrl = (mlServiceUrl != null && !mlServiceUrl.isBlank())
                 ? mlServiceUrl.trim()
                 : "http://localhost:8000";
@@ -50,108 +57,72 @@ public class MlService {
 
     /**
      * Call the Python ML service's /predict endpoint.
-     * If the ML service is temporarily down (e.g. Render cold start),
-     * falls back gracefully to deterministic clinical scoring so the user is never blocked.
+     * Enforces research integrity: never silently substitutes heuristic values.
      *
      * @param request clinical feature values
-     * @return ML prediction with SHAP explanations
+     * @return ML prediction with verified SHAP explanations
+     * @throws MlServiceException if the service is unreachable or returns an error
      */
     public MlPredictionResponse predict(AssessmentRequest request) {
+        log.info("Calling ML service for prediction (age={}, bp={})",
+                request.getAge(), request.getBloodPressure());
+
+        Map<String, Object> payload = buildPayload(request);
+
         try {
-            log.info("Calling ML service for prediction (age={}, bp={})",
-                    request.getAge(), request.getBloodPressure());
-
-            // Map DTO fields to the Python service's expected JSON field names
-            Map<String, Object> payload = buildPayload(request);
-
-            MlPredictionResponse response = restClient.post()
+            var requestSpec = restClient.post()
                     .uri("/predict")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload)
+                    .body(payload);
+
+            if (internalSecret != null && !internalSecret.isBlank()) {
+                requestSpec.header("X-Internal-Secret", internalSecret);
+            }
+
+            MlPredictionResponse response = requestSpec
                     .retrieve()
                     .body(MlPredictionResponse.class);
 
             if (response == null) {
-                log.warn("ML service returned null response, using fallback evaluation");
-                return computeFallbackPrediction(request);
+                throw new MlServiceException("ML service returned an empty response.");
+            }
+
+            if (Boolean.TRUE.equals(response.getIsDemoMode()) ||
+                    "unavailable".equalsIgnoreCase(response.getPrediction()) ||
+                "error".equalsIgnoreCase(response.getPrediction())) {
+                throw new MlServiceException("ML model is currently unavailable on the prediction service.");
             }
 
             log.info("ML prediction received: {} (score={})",
                     response.getPrediction(), response.getRiskScore());
 
             return response;
+        } catch (MlServiceException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("ML service call failed ({}). Generating resilient clinical fallback.", e.getMessage());
-            return computeFallbackPrediction(request);
+            log.error("ML service call failed: {}", e.getMessage());
+            throw new MlServiceException("Predictive machine learning service is currently unavailable. Please verify service health: " + e.getMessage());
         }
-    }
-
-    /**
-     * Resilient fallback based on validated clinical nephrology criteria
-     * (eGFR proxy, hypertension, diabetes, proteinuria, and age)
-     * so that a cold-starting or unreachable microservice never breaks the patient flow.
-     */
-    private MlPredictionResponse computeFallbackPrediction(AssessmentRequest req) {
-        double baseRisk = 0.05;
-
-        // Age factor
-        if (req.getAge() != null && req.getAge() > 60) baseRisk += 0.15;
-        else if (req.getAge() != null && req.getAge() > 45) baseRisk += 0.08;
-
-        // Blood pressure factor
-        if (req.getBloodPressure() != null && req.getBloodPressure() >= 90) baseRisk += 0.18;
-        else if (req.getBloodPressure() != null && req.getBloodPressure() >= 80) baseRisk += 0.08;
-
-        // Comorbidities
-        if ("yes".equalsIgnoreCase(req.getHypertension())) baseRisk += 0.20;
-        if ("yes".equalsIgnoreCase(req.getDiabetesMellitus())) baseRisk += 0.22;
-        if ("yes".equalsIgnoreCase(req.getPedalEdema())) baseRisk += 0.12;
-
-        // Key lab markers if present
-        if (req.getSerumCreatinine() != null && req.getSerumCreatinine() > 1.4) baseRisk += 0.25;
-        if (req.getAlbumin() != null && req.getAlbumin() > 1.0) baseRisk += 0.20;
-        if (req.getHemoglobin() != null && req.getHemoglobin() < 12.0) baseRisk += 0.15;
-
-        double riskScore = Math.min(0.98, Math.max(0.02, Math.round(baseRisk * 100.0) / 100.0));
-        String prediction = riskScore >= 0.50 ? "ckd" : "notckd";
-
-        var explanations = new java.util.ArrayList<MlPredictionResponse.MlFeatureExplanation>();
-        if (req.getSerumCreatinine() != null) {
-            explanations.add(MlPredictionResponse.MlFeatureExplanation.builder()
-                    .feature("serum_creatinine").value(req.getSerumCreatinine())
-                    .shapValue(req.getSerumCreatinine() > 1.2 ? 0.35 : -0.15).build());
-        }
-        if (req.getBloodPressure() != null) {
-            explanations.add(MlPredictionResponse.MlFeatureExplanation.builder()
-                    .feature("blood_pressure").value(req.getBloodPressure())
-                    .shapValue(req.getBloodPressure() > 80 ? 0.22 : -0.08).build());
-        }
-        if (req.getAge() != null) {
-            explanations.add(MlPredictionResponse.MlFeatureExplanation.builder()
-                    .feature("age").value(req.getAge().doubleValue())
-                    .shapValue(req.getAge() > 50 ? 0.18 : -0.05).build());
-        }
-
-        return MlPredictionResponse.builder()
-                .riskScore(riskScore)
-                .prediction(prediction)
-                .modelVersion("v1.0-fallback")
-                .explanations(explanations)
-                .build();
     }
 
     public Map<String, Object> getModelEvaluation() {
         try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> result = restClient.get()
+            var requestSpec = restClient.get()
                     .uri("/evaluate")
-                    .accept(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON);
+
+            if (internalSecret != null && !internalSecret.isBlank()) {
+                requestSpec.header("X-Internal-Secret", internalSecret);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = requestSpec
                     .retrieve()
                     .body(Map.class);
             return result;
         } catch (Exception e) {
             log.error("Failed to fetch ML model evaluation: {}", e.getMessage());
-            return Map.of("status", "unavailable", "message", e.getMessage());
+            return Map.of("status", "metrics_unavailable", "message", "Evaluation metrics currently unreachable");
         }
     }
 

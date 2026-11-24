@@ -12,9 +12,13 @@ import lombok.NoArgsConstructor;
 public class RecommendationResponse {
 
     private Long id;
+    private String ruleId;
     private String category;
     private String triggerReason;
+    private String observationPeriod;
     private String recommendation;
     private String priority;
     private String source;
+    private String knownLimitations;
+    private String contraindications;
 }

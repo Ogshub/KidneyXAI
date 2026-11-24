@@ -3,22 +3,22 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Alert } from '../components/common';
-import { 
-  HeartPulse, 
-  LogIn, 
-  Shield, 
-  Activity, 
-  Sun, 
-  Moon, 
-  ArrowLeft, 
-  Palette, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Sparkles, 
-  CheckCircle2, 
-  TrendingUp, 
+import {
+  HeartPulse,
+  LogIn,
+  Shield,
+  Activity,
+  Sun,
+  Moon,
+  ArrowLeft,
+  Palette,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  CheckCircle2,
+  TrendingUp,
   Award
 } from 'lucide-react';
 
@@ -265,10 +265,10 @@ export const Login = () => {
                   isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'
                 }`}
               >
-                3,047
+                400
               </p>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Multi-Cohort Cases
+                UCI Benchmark Records
               </p>
             </div>
           </div>
