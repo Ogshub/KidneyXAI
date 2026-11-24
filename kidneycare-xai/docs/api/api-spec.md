@@ -235,3 +235,15 @@ Submits anonymized college lifestyle and kidney health awareness survey.
   "receivedKidneyInfo": true
 }
 ```
+
+## Phase 3 medical records
+
+Every route requires the application JWT. The authenticated principal determines ownership. Cross-account report and measurement lookups return 404.
+
+- `GET /api/reports?page=0&size=20` lists report metadata. `POST /api/reports` accepts JSON metadata or multipart `report` (JSON) plus `file`.
+- `GET|PUT|DELETE /api/reports/{id}` retrieves, edits or deletes a report. `PUT /api/reports/{id}/file` replaces its multipart attachment. Accepted attachments are PDF, PNG or JPEG, up to 10 MB.
+- `GET /api/reports/{id}/file-link` issues a 120-second signed path. Fetch that path using the same authenticated API client. Download responses are attachment-only and use `Cache-Control: no-store`. Replacement invalidates previous links.
+- `POST /api/reports/{id}/lab-results` creates a measurement. `PUT|DELETE /api/reports/{id}/lab-results/{resultId}` edits or removes it. Send parameter, original value/unit, measurement date, source, optional reference interval, and the user's transcription confirmation.
+- `GET /api/lab-results/parameters` lists accepted units and assessment field mappings. `GET /api/lab-results?parameter=serum_creatinine&limit=100` returns results in chronological order.
+- `GET /api/lab-results/compare?a={firstReportId}&b={secondReportId}` returns the latest measurement for each parameter in both reports and computes a delta when both have compatible normalized values.
+- `GET /api/lab-results/assessment-inputs` returns the latest user-confirmed measurement for each supported assessment field. The UI requires a separate confirmation before copying values.

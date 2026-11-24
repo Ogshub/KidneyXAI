@@ -44,7 +44,7 @@ ALTER TABLE daily_activities
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'chk_medication_status'
+        SELECT 1 FROM pg_constraint WHERE conname = 'chk_medication_status' AND conrelid = 'daily_activities'::regclass
     ) THEN
         ALTER TABLE daily_activities
             ADD CONSTRAINT chk_medication_status

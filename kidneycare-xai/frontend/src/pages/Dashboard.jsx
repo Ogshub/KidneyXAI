@@ -77,6 +77,14 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-8 pb-12 transition-colors duration-200">
+      <Card>
+        <h2 className="font-bold mb-2">Medical records</h2>
+        <div className="flex flex-wrap gap-4">
+          <Link className="underline" to="/reports">Manage reports</Link>
+          <Link className="underline" to="/lab-history">View laboratory history</Link>
+          <Link className="underline" to="/report-comparison">Compare reports</Link>
+        </div>
+      </Card>
       {/* Header with Quick Actions */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-teal-900 to-slate-900 dark:from-teal-950 dark:to-slate-950 text-white p-6 sm:p-8 rounded-3xl shadow-sm border border-teal-800/30">
         <div className="space-y-1">

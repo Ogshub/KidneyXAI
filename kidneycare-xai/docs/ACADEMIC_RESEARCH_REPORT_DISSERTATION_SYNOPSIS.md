@@ -7,10 +7,10 @@
 ### Project Title
 **KidneyCare-XAI: A Human-Centered Explainable Decision-Support Framework for Kidney-Health Risk Awareness, Traceable Recommendations, and Longitudinal Lifestyle Monitoring**
 
-### Abstract (295 words)
+### Abstract
 Machine learning (ML) models for Chronic Kidney Disease (CKD) risk estimation have proliferated in recent literature, frequently reporting near-perfect discriminative performance on canonical benchmark datasets. However, recent systematic reviews in Explainable Artificial Intelligence (XAI) and Clinical Decision Support Systems (CDSS) demonstrate that algorithmic accuracy and post-hoc feature attribution do not inherently translate to user comprehension, actionable guidance, or appropriate reliance. Existing CKD systems predominantly function as static black-box classifiers, omitting transparent justification for lifestyle advice, failing to evaluate cognitive utility, and risking automation bias or unjustified over-trust.
 
-This study presents **KidneyCare-XAI**, a human-centered decision-support framework that explicitly separates predictive estimation, local explanation, traceable recommendation, and longitudinal monitoring. The system incorporates an empirical machine learning pipeline (Extreme Gradient Boosting with TreeSHAP local attributions) evaluated on the 400-record UCI CKD benchmark and externally benchmarked on the 988-record Bangladesh BD-KDD cohort. Crucially, the predictive foundation serves not as the primary novelty, but as the operational substrate for: (1) an auditable, rule-based recommendation engine that couples every lifestyle suggestion to an explicit trigger, priority tier, and clinical guideline source (`trigger` $\rightarrow$ `category` $\rightarrow$ `priority` $\rightarrow$ `source`); (2) a longitudinal lifestyle tracker supporting daily habits (hydration, physical activity, sleep, dietary sodium/processed food frequency) without conflating behavioural tracking with clinical disease diagnosis; and (3) a controlled human-subject evaluation ($N=64$) comparing a baseline Prediction-Only interface against the Explainable and Traceable interface across standardized clinical vignettes (correct, incorrect, and borderline cases). Results indicate that explainable and traceable presentation significantly enhances user comprehension ($p < 0.001$), improves perceived recommendation actionability ($p < 0.01$), and fosters calibrated reliance rather than blind over-trust, establishing a defensible paradigm for translational health informatics.
+KidneyCare-XAI separates risk estimation, TreeSHAP explanation, guideline-traceable education, and longitudinal monitoring. The primary XGBoost pipeline was evaluated on the 400-record UCI CKD benchmark using ten-fold stratified cross-validation. An external BD-KDD study and a controlled human evaluation remain proposed. Current prototype tests validate software behavior with synthetic accounts and cannot establish clinical utility.
 
 **Keywords**: Explainable Artificial Intelligence (XAI), Human-AI Interaction, Trust Calibration, Appropriate Reliance, Chronic Kidney Disease, Traceable Recommendations, System Usability Scale (SUS).
 
@@ -165,7 +165,7 @@ The lifestyle tracking component monitors non-diagnostic habits over time:
 * **Design Constraint**: The system explicitly warns the user: *"This lifestyle score tracks your daily wellness habits. It is not a clinical kidney function score and cannot measure kidney filtration or disease status."*
 
 ### 3.5 Human-Subject Experimental Design (Experiment 2)
-To evaluate the efficacy of the framework, a controlled between-subjects experiment was conducted with 64 participants recruited from a university cohort:
+To evaluate the efficacy of the framework, the proposed between-subjects design targets 64 participants, subject to ethics approval and recruitment:
 * **Condition A (Prediction-Only)**: Participants inspect standardized patient scenarios and view only the predicted risk estimate (e.g., "Elevated Risk: 84%") and standard generic guidance without feature attributions or traceable rule links.
 * **Condition B (Explainable & Traceable)**: Participants inspect the identical standardized scenarios and view the risk estimate, the interactive TreeSHAP waterfall graph with top contributing biomarkers, and the traceable recommendation cards showing triggers and sources.
 
@@ -217,66 +217,26 @@ During 10-fold stratified cross-validation, the `ColumnTransformer` is fitted ex
 
 ## Chapter 5 – Results and Discussions
 
-### 5.1 Experiment 1: Predictive Foundation and Robustness
-The baseline machine learning models were evaluated under 10-fold stratified cross-validation on the primary UCI benchmark ($n=400$):
+### 5.1 Primary UCI benchmark
 
-| Model Architecture | Accuracy (Mean ± SD) | Precision | Recall (Sensitivity) | F1-Score | AUROC |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Logistic Regression (L2 Regularized)** | $91.50\% \pm 3.1\%$ | 0.9200 | 0.9420 | 0.9310 | 0.9420 |
-| **Random Forest (100 Trees)** | $96.75\% \pm 1.8\%$ | 0.9700 | 0.9780 | 0.9740 | 0.9850 |
-| **XGBoost (100 Trees, Depth=4)** | **$98.50\% \pm 1.2\%$** | **0.9849** | **0.9920** | **0.9881** | **0.9981** |
+The 400-record UCI pipeline was reproduced using ten-fold stratified cross-validation. Accuracy was 98.50%, precision 0.9849, sensitivity 0.9920, specificity 0.9733, F1 0.9881, and AUROC 0.9981. The generated report binds these metrics to the trained model and preprocessor. These estimates describe the benchmark cohort.
 
-#### External Robustness Evaluation on BD-KDD Cohort ($n=988$)
-When the model trained on the UCI cohort was evaluated on the independent Bangladesh BD-KDD cohort without retraining, performance shifted to:
-* **Accuracy**: $92.41\%$
-* **AUROC**: $0.8872$
-* **Discussion of Generalization Gap**: The observed decrease in discriminative metrics from $98.5\%$ to $92.4\%$ reflects genuine demographic, laboratory reference range, and epidemiological differences between the two hospital populations. Serum creatinine and hemoglobin remained consistent top contributors, whereas blood urea exhibited higher variance in the BD-KDD cohort. Rather than treating this drop as a failure, it provides empirical evidence that small-cohort models experience measurable distribution shift across distinct geographic populations.
+### 5.2 Pending studies
 
-### 5.2 Experiment 2: Human-Subject Evaluation Results ($N=64$)
-
-```
-========================================================================
-  KidneyCare-XAI — Controlled Human-Subject Evaluation Summary (N=64)
-========================================================================
-  Metric / Variable               Condition A        Condition B      p-value
-                               (Prediction-Only)   (Explainable+Trace)
-------------------------------------------------------------------------
-  Factor Identification (0-100%)    34.4% ± 12.1%     87.5% ± 9.4%    p < 0.001
-  Subjective Understanding (1-5)     2.81 ± 0.64       4.38 ± 0.52    p < 0.001
-  Recommendation Actionability(1-5)  3.12 ± 0.71       4.44 ± 0.49    p < 0.001
-  Trust Calibration (Case 2 Acc.)   21.9%             68.8%           p < 0.001
-  Appropriate Uncertainty (Case 3)  28.1%             75.0%           p < 0.001
-  System Usability Scale (SUS)      N/A               79.4 ± 6.8      (Grade A)
-========================================================================
-```
-
-#### Evaluation of Hypotheses:
-* **H1 Supported ($p < 0.001$)**: Participants viewing the TreeSHAP waterfall visualizer correctly identified the specific laboratory features responsible for the risk estimate in $87.5\%$ of trials, compared to only $34.4\%$ in the prediction-only group (who largely guessed based on general health assumptions).
-* **H2 Supported ($p < 0.001$)**: Subjective comprehension increased substantially (mean $4.38/5$ vs. $2.81/5$, Mann-Whitney $U = 112.5, p < 0.001$).
-* **H3 Supported ($p < 0.001$)**: Traceable recommendation cards achieved significantly higher ratings for perceived relevance and actionability ($4.44/5$ vs. $3.12/5$), with participants noting that seeing the triggering rule and evidence source increased their motivation to follow dietary and hydration guidance.
-* **H4 Supported ($p < 0.001$)**: In Case 2 (erroneous model prediction), only $21.9\%$ of Prediction-Only participants questioned the system, with over $78\%$ blindly accepting the false output (automation bias). In contrast, $68.8\%$ of Explainable & Traceable participants recognized that the feature attributions did not match the clinical story, correctly rejecting the flawed recommendation.
-* **H5 Supported**: The platform attained a mean System Usability Scale (SUS) score of **$79.4 \pm 6.8$**, placing it in the 85th percentile (Grade A) of software usability benchmarks.
-
-### 5.3 Discussion of Results
-These findings demonstrate that the true value of explainability in health risk tools lies not in generating charts for computer scientists, but in providing users with cognitive scaffolding to verify outputs. By combining local explanations with traceable recommendation chains, KidneyCare-XAI successfully mitigates automation bias, enabling users to calibrate their trust appropriately.
-
----
-
+BD-KDD external validation and the human-subject vignette study have no verified results in the repository. Follow the research protocol and report findings after executing the studies.
 ## Chapter 6 – Conclusion and Recommendations
 
 ### 6.1 Summary of the Work Done
-This research conceptualized, implemented, and empirically evaluated **KidneyCare-XAI**, a human-centered decision-support framework that bridges the gap between machine learning predictions and user-facing actionability. The system decouples predictive modeling, local feature attribution, rule-based recommendation traceability, and longitudinal habit tracking, and was validated through both computational benchmarking and a controlled human-subject study ($N=64$).
+
+The prototype combines UCI benchmark risk estimation, local feature attribution, rule-based recommendation traceability, and longitudinal journaling. The implemented software and reproduced benchmark support a research baseline for future evaluation.
 
 ### 6.2 Key Findings
-1. **Explainability Fosters Trust Calibration, Not Blind Trust**: When users understand the specific factors driving an algorithmic prediction, they are significantly more capable of catching erroneous or uncertain outputs ($68.8\%$ vs. $21.9\%$).
-2. **Recommendation Traceability Drives Actionability**: Linking lifestyle suggestions to explicit triggers, rule IDs, and clinical sources substantially improves user confidence and perceived relevance over generic advice ($p < 0.001$).
-3. **Decoupled Architecture Prevents Misleading Claims**: Keeping behavioral lifestyle tracking strictly separate from clinical diagnostic models ensures the platform remains ethically defensible and compliant with medical software risk guidelines.
 
-### 6.3 Limitations of the Work
-1. **Participant Demographics**: The human-subject evaluation was conducted on a literate, technology-literate university cohort; evaluation among older adults or clinical outpatient populations is necessary.
-2. **Cross-Sectional Evaluation**: Long-term adherence to the traceable recommendations was not measured longitudinally over months.
-3. **Synthetic Vignette Testing**: User responses were measured using standardized scenario vignettes rather than participants' personal medical diagnoses.
+The verified computational findings appear in Section 5.1. Whether the interface improves comprehension, actionability, or appropriate reliance remains an empirical question.
 
+### 6.3 Limitations
+
+The benchmark is small and retrospective. External generalization, acceptability, usability, and longitudinal outcomes require dedicated evaluation.
 ### 6.4 Future Scope
 1. **Multilingual and Low-Literacy Visualizations**: Developing icon-driven, non-textual explanation representations for diverse socio-economic populations.
 2. **Prospective Longitudinal Adherence Studies**: Tracking habit adherence and self-efficacy across a 6-month prospective user cohort.

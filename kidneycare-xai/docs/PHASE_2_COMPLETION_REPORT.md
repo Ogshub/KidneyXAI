@@ -263,4 +263,4 @@ Implemented deterministic rules with clinical citations:
 
 ### Remaining sign-off work
 
-The owner conditionally approved local Phase 3. Credential rotation remains an owner action and hosted infrastructure was untouched. Complete browser, recommendation provenance and migration regressions during Phase 3.
+The owner conditionally approved local Phase 3. The eight existing ML tests and six evaluation integrity cases passed (14 total). Credential rotation remains an owner action and hosted infrastructure was untouched. Complete browser, recommendation provenance and migration regressions during Phase 3.

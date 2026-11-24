@@ -376,6 +376,10 @@ KidneyXAI/
 
 ---
 
+## Medical Records and Laboratory History
+
+Authenticated users can manage private medical reports, enter source-attributed laboratory measurements, view trends, compare reports and review eligible assessment inputs. See the [Phase 3 completion report](kidneycare-xai/docs/PHASE_3_COMPLETION_REPORT.md) for local migrations and test commands.
+
 ## ⚡ Local Development Quickstart
 
 ### Prerequisites

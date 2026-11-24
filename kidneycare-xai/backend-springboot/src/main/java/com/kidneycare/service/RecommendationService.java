@@ -420,6 +420,7 @@ public class RecommendationService {
                 .source(r.getSource())
                 .knownLimitations(r.getKnownLimitations())
                 .contraindications(r.getContraindications())
+                .createdAt(r.getCreatedAt())
                 .build();
     }
 }

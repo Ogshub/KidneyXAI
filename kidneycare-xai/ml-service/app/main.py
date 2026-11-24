@@ -157,11 +157,10 @@ async def predict_risk(request: PredictionRequest):
 
     try:
         result = predict(request)
-        logger.info(f"Prediction: {result.prediction}, score={result.risk_score}, demo={result.is_demo_mode}")
         return result
     except Exception as e:
-        logger.error(f"Prediction failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error("Prediction failed (%s)", type(e).__name__)
+        raise HTTPException(status_code=500, detail="Prediction failed")
 
 
 @app.get("/model-info", response_model=ModelInfoResponse)

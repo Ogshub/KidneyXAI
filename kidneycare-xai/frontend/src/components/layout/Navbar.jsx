@@ -38,6 +38,7 @@ export const Navbar = () => {
         { name: 'Daily Tracker', path: '/tracker', icon: Activity },
         { name: 'Recommendations', path: '/recommendations', icon: Compass },
         { name: 'History', path: '/history', icon: History },
+        { name: 'Medical Reports', path: '/reports', icon: FileText },
         { name: 'Evaluation Analytics', path: '/analytics', icon: Award },
       ]
     : [
@@ -102,7 +103,7 @@ export const Navbar = () => {
   if (isBrutalist) {
     return (
       <header className="sticky top-0 z-40 bg-[var(--bg-surface)] border-b-[3px] border-[var(--border-subtle)] transition-colors duration-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center gap-2.5">
@@ -120,7 +121,7 @@ export const Navbar = () => {
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden 2xl:flex items-center gap-1">
               {navLinks.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -141,7 +142,7 @@ export const Navbar = () => {
             </nav>
 
             {/* Right side actions */}
-            <div className="hidden md:flex items-center gap-1.5">
+            <div className="hidden 2xl:flex items-center gap-1.5">
               {/* Dark Mode Toggle */}
               <button
                 onClick={toggleTheme}
@@ -217,7 +218,7 @@ export const Navbar = () => {
             </div>
 
             {/* Mobile menu toggle */}
-            <div className="flex items-center gap-1 md:hidden">
+            <div className="flex items-center gap-1 2xl:hidden">
               <button
                 onClick={toggleTheme}
                 className="p-2 text-[var(--text-main)] hover:bg-[var(--brutalist-yellow)]"
@@ -237,7 +238,7 @@ export const Navbar = () => {
 
         {/* Mobile dropdown — Brutalist */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t-[3px] border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 pt-2 pb-4 space-y-0">
+          <div className="2xl:hidden border-t-[3px] border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 pt-2 pb-4 space-y-0">
             {navLinks.map((item) => (
               <Link
                 key={item.name}
@@ -311,7 +312,7 @@ export const Navbar = () => {
   // ── Clinical (default) Navbar ──
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[96rem] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center gap-2.5">
@@ -329,7 +330,7 @@ export const Navbar = () => {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden 2xl:flex items-center gap-1">
             {navLinks.map((item) => {
               const Icon = item.icon;
               return (
@@ -350,7 +351,7 @@ export const Navbar = () => {
           </nav>
 
           {/* Right side actions */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden 2xl:flex items-center gap-2">
             {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleTheme}
@@ -433,7 +434,7 @@ export const Navbar = () => {
           </div>
 
           {/* Mobile menu and theme toggle */}
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex items-center gap-1 2xl:hidden">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -453,7 +454,7 @@ export const Navbar = () => {
 
       {/* Mobile dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-1">
+        <div className="2xl:hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4 space-y-1">
           {navLinks.map((item) => (
             <Link
               key={item.name}

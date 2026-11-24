@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { assessmentApi } from '../api';
+import { labApi } from '../api/medicalRecords';
 import { 
   HeartPulse, 
   Sparkles, 
@@ -52,6 +53,32 @@ export const Assessment = () => {
   };
 
   const [form, setForm] = useState(initialForm);
+  const [prefill, setPrefill] = useState(null);
+  const [loadingPrefill, setLoadingPrefill] = useState(false);
+  const [prefillNotice, setPrefillNotice] = useState('');
+
+  const reviewLaboratoryValues = async () => {
+    setPrefillNotice('');
+    setLoadingPrefill(true);
+    try {
+      const eligible = await labApi.assessmentInputs();
+      setPrefill(eligible);
+    } catch {
+      setPrefillNotice('Confirmed laboratory values could not be loaded.');
+    } finally {
+      setLoadingPrefill(false);
+    }
+  };
+
+  const applyLaboratoryValues = () => {
+    setForm((current) => ({
+      ...current,
+      ...Object.fromEntries(Object.entries(prefill).map(([field, result]) => [field, String(result.normalizedValue)])),
+    }));
+    setMode('LAB');
+    setPrefill(null);
+    setPrefillNotice('Values copied. Review the date, units and all remaining inputs before submitting.');
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -154,7 +181,6 @@ export const Assessment = () => {
       // Navigate to results screen with the returned assessment
       navigate(`/assessment/result/${result.id}`, { state: { assessment: result } });
     } catch (err) {
-      console.error('Assessment submission error:', err);
       const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to process clinical assessment with ML service. Please ensure the backend and ML service are active.';
       setError(msg);
     } finally {
@@ -245,6 +271,23 @@ export const Assessment = () => {
       )}
 
       {/* Form */}
+      <Card className="space-y-3">
+        <Button variant="secondary" onClick={reviewLaboratoryValues} disabled={loadingPrefill}>
+          {loadingPrefill ? 'Loading saved results…' : 'Review saved laboratory values'}
+        </Button>
+        {prefillNotice && <p role="status">{prefillNotice}</p>}
+        {prefill && (Object.keys(prefill).length ? <>
+          <p>Only compatible values you confirmed are eligible. Check that the measurements are current.</p>
+          <ul className="list-disc pl-5">
+            {Object.values(prefill).map((item) => <li key={item.id}>
+              {item.parameterName.replaceAll('_', ' ')} · {item.normalizedValue} {item.normalizedUnit} · {item.recordedAt} · {item.source}
+            </li>)}
+          </ul>
+          <Button onClick={applyLaboratoryValues}>Confirm and copy values</Button>
+          <Button variant="secondary" onClick={() => setPrefill(null)}>Cancel</Button>
+        </> : <p role="status">No eligible confirmed measurements are available.</p>)}
+      </Card>
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Section 1: Vitals & Demographics */}
         <Card title="1. Demographics & Blood Pressure" icon={HeartPulse}>

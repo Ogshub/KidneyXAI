@@ -114,7 +114,7 @@ Add `isDemoMode: true` field to `PredictionResponse` when in demo mode.
 
 ### 3.1 Storage Strategy
 
-**Use Supabase Storage** (already provisioned via SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) for file blobs.
+The Phase 3 local adapter stores attachments in private PostgreSQL rows with short-lived owner-bound download grants. Hosted object storage is a future deployment decision requiring an authorized target.
 Metadata stored in PostgreSQL.
 
 ### 3.2 Database Tables
@@ -186,7 +186,7 @@ GET    /api/lab-results/compare?a=&b=       Compare lab values between two repor
 **New pages**:
 - `src/pages/Reports.jsx` — upload form + report list + per-report detail
 - `src/pages/LabHistory.jsx` — parameter selector + multi-line time-series chart + reference bands
-- `src/components/charts/LabTrendChart.jsx` — Recharts LineChart with reference range bands
+- The laboratory history view uses the existing Chart.js stack and plots measurements by collection date. Source reference intervals are recorded and displayed in report details.
 
 **Updated API layer**: `src/api/index.js` — add `reportsApi`, `labApi`
 

@@ -64,9 +64,6 @@ public class MlService {
      * @throws MlServiceException if the service is unreachable or returns an error
      */
     public MlPredictionResponse predict(AssessmentRequest request) {
-        log.info("Calling ML service for prediction (age={}, bp={})",
-                request.getAge(), request.getBloodPressure());
-
         Map<String, Object> payload = buildPayload(request);
 
         try {
@@ -93,15 +90,12 @@ public class MlService {
                 throw new MlServiceException("ML model is currently unavailable on the prediction service.");
             }
 
-            log.info("ML prediction received: {} (score={})",
-                    response.getPrediction(), response.getRiskScore());
-
             return response;
         } catch (MlServiceException e) {
             throw e;
         } catch (Exception e) {
-            log.error("ML service call failed: {}", e.getMessage());
-            throw new MlServiceException("Predictive machine learning service is currently unavailable. Please verify service health: " + e.getMessage());
+            log.warn("ML service call failed ({})", e.getClass().getSimpleName());
+            throw new MlServiceException("Predictive machine learning service is currently unavailable. Please verify service health.");
         }
     }
 
