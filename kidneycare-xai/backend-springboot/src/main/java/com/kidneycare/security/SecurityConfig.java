@@ -41,6 +41,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setHeader("WWW-Authenticate", "Bearer");
+                    response.setContentType("application/json");
+                    response.setHeader("Cache-Control", "no-store");
+                    if (Boolean.TRUE.equals(request.getAttribute(JwtAuthenticationFilter.INVALID_SESSION))) {
+                        response.getWriter().write("{\"code\":\"SESSION_EXPIRED\",\"message\":\"Your session expired. Please sign in again.\"}");
+                    } else {
+                        response.getWriter().write("{\"code\":\"AUTHENTICATION_REQUIRED\",\"message\":\"Please sign in to continue.\"}");
+                    }
+                }))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints (no JWT required)
                         .requestMatchers("/api/auth/**").permitAll()

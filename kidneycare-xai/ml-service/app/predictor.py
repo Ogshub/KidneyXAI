@@ -1,11 +1,16 @@
 """
-KidneyCare-XAI — Predictor
+KidneyCare-XAI — Predictor (Phase 2)
 
-Runs model.predict_proba() + SHAP explanations for a single instance.
-Handles both real model and demo mode.
+Key improvements:
+  - Strict transformed-to-original feature mapping using preprocessor metadata.
+  - Dimension alignment checks (transformed features vs SHAP output).
+  - Signed sum aggregation for encoded columns belonging to the same original feature.
+  - Preserves SHAP additivity in log-odds model margin space.
+  - Returns explicit 'model_unavailable' or 'explanation_unavailable' states instead of
+    generating misleading synthetic SHAP values or silently substituting heuristics.
 """
 import logging
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 import pandas as pd
@@ -18,125 +23,151 @@ logger = logging.getLogger(__name__)
 
 def predict(request: PredictionRequest) -> PredictionResponse:
     """
-    Generate a risk prediction + SHAP explanations for a single patient.
-
-    If a real model is loaded, uses predict_proba + SHAP.
-    If in demo mode, generates plausible synthetic predictions.
+    Generate risk prediction + SHAP explanations for a single clinical observation.
+    Returns explicit error/unavailable states when artifacts are not loaded.
     """
-    if artifacts.is_loaded:
-        return _predict_real(request)
-    else:
-        return _predict_demo(request)
+    if not artifacts.is_loaded or artifacts.model is None or artifacts.preprocessor is None:
+        logger.warning("Predict requested but model artifacts are not loaded.")
+        return PredictionResponse(
+            riskScore=0.0,
+            prediction="unavailable",
+            explanations=[],
+            modelVersion="unavailable",
+            isDemoMode=True,
+            explanationStatus="model_unavailable",
+        )
+
+    return _predict_real(request)
 
 
 def _predict_real(request: PredictionRequest) -> PredictionResponse:
-    """Run the real trained model + SHAP explainer."""
-
-    # ── Build feature vector ──
+    """Run real model inference and verified SHAP attribution mapping."""
     feature_dict = _request_to_feature_dict(request)
     feature_df = pd.DataFrame([feature_dict])
 
-    # ── Preprocess (use the fitted pipeline from training) ──
-    if artifacts.preprocessor is not None:
+    # ── Preprocess ──
+    try:
         feature_array = artifacts.preprocessor.transform(feature_df)
-    else:
-        feature_array = feature_df.values
+    except Exception as e:
+        logger.error(f"Preprocessor transform failed: {e}", exc_info=True)
+        return PredictionResponse(
+            riskScore=0.0,
+            prediction="error",
+            explanations=[],
+            modelVersion=artifacts.model_version,
+            isDemoMode=False,
+            explanationStatus="preprocessing_failed",
+        )
 
-    # ── Predict ──
-    probabilities = artifacts.model.predict_proba(feature_array)
-    # Assuming class 1 = CKD
-    risk_score = float(probabilities[0][1])
-    prediction = "ckd" if risk_score >= 0.5 else "notckd"
+    # ── Probability Prediction ──
+    try:
+        probabilities = artifacts.model.predict_proba(feature_array)
+        # Class 1 = CKD
+        risk_score = float(probabilities[0][1])
+        prediction = "ckd" if risk_score >= 0.5 else "notckd"
+    except Exception as e:
+        logger.error(f"Model prediction failed: {e}", exc_info=True)
+        return PredictionResponse(
+            riskScore=0.0,
+            prediction="error",
+            explanations=[],
+            modelVersion=artifacts.model_version,
+            isDemoMode=False,
+            explanationStatus="inference_failed",
+        )
 
-    # ── SHAP ──
-    explanations = _compute_shap(feature_array, feature_dict)
-
-    return PredictionResponse(
-        riskScore=round(risk_score, 4),
-        prediction=prediction,
-        explanations=explanations,
-        modelVersion=artifacts.model_version
-    )
-
-
-def _predict_demo(request: PredictionRequest) -> PredictionResponse:
-    """
-    Generate synthetic predictions for development/testing.
-    Uses simple heuristics based on input features to produce
-    plausible-looking risk scores and SHAP values.
-    """
-    feature_dict = _request_to_feature_dict(request)
-
-    # Simple heuristic: higher creatinine, older age, diabetes → higher risk
-    risk_factors = 0.0
-    total_weight = 0.0
-
-    # Age contribution
-    age = feature_dict.get("age", 30)
-    if age > 60:
-        risk_factors += 0.15
-    elif age > 45:
-        risk_factors += 0.08
-    total_weight += 0.15
-
-    # Creatinine contribution
-    creatinine = feature_dict.get("serum_creatinine", 1.0)
-    if creatinine is not None:
-        if creatinine > 3.0:
-            risk_factors += 0.25
-        elif creatinine > 1.5:
-            risk_factors += 0.15
-        elif creatinine > 1.2:
-            risk_factors += 0.05
-    total_weight += 0.25
-
-    # Blood pressure contribution
-    bp = feature_dict.get("blood_pressure", 120)
-    if bp is not None:
-        if bp > 140:
-            risk_factors += 0.12
-        elif bp > 130:
-            risk_factors += 0.06
-    total_weight += 0.12
-
-    # Hemoglobin contribution (low = higher risk)
-    hemo = feature_dict.get("hemoglobin", 14.0)
-    if hemo is not None:
-        if hemo < 10:
-            risk_factors += 0.18
-        elif hemo < 12:
-            risk_factors += 0.08
-    total_weight += 0.18
-
-    # Diabetes contribution
-    diabetes = feature_dict.get("diabetes_mellitus", "no")
-    if diabetes and str(diabetes).lower() == "yes":
-        risk_factors += 0.10
-    total_weight += 0.10
-
-    # Hypertension contribution
-    hypertension = feature_dict.get("hypertension", "no")
-    if hypertension and str(hypertension).lower() == "yes":
-        risk_factors += 0.08
-    total_weight += 0.08
-
-    # Normalize to 0–1 range
-    risk_score = min(max(risk_factors / max(total_weight, 0.01), 0.05), 0.95)
-    prediction = "ckd" if risk_score >= 0.5 else "notckd"
-
-    # Generate synthetic SHAP-like explanations
-    explanations = _generate_demo_shap(feature_dict, risk_score)
+    # ── SHAP Attribution ──
+    explanations, explanation_status = _compute_verified_shap(feature_array, feature_dict)
 
     return PredictionResponse(
         riskScore=round(risk_score, 4),
         prediction=prediction,
         explanations=explanations,
-        modelVersion="demo"
+        modelVersion=artifacts.model_version,
+        isDemoMode=False,
+        explanationStatus=explanation_status,
     )
+
+
+def _compute_verified_shap(
+    feature_array: np.ndarray,
+    feature_dict: dict[str, Any]
+) -> Tuple[list[FeatureExplanation], str]:
+    """
+    Compute SHAP values, verify dimension alignment, and map encoded columns
+    back to original features using signed sums.
+    """
+    if artifacts.explainer is None:
+        logger.warning("SHAP explainer artifact is not loaded.")
+        return [], "explanation_unavailable"
+
+    if not artifacts.mapping_valid or not artifacts.transformed_feature_names:
+        logger.warning("Feature mapping is invalid or uninitialized.")
+        return [], "explanation_unavailable"
+
+    try:
+        shap_values = artifacts.explainer.shap_values(feature_array)
+
+        # Normalize SHAP output shape
+        if isinstance(shap_values, list):
+            # Binary classification: index 1 corresponds to positive CKD class
+            values = shap_values[1][0] if len(shap_values) > 1 else shap_values[0][0]
+        elif len(np.shape(shap_values)) == 3:
+            values = shap_values[0, :, 1]
+        elif len(np.shape(shap_values)) == 2:
+            values = shap_values[0]
+        else:
+            values = shap_values
+
+        values = np.asarray(values).flatten()
+
+        # Dimension verification
+        expected_dim = len(artifacts.transformed_feature_names)
+        if len(values) != expected_dim:
+            logger.error(
+                f"SHAP output dimension mismatch: got {len(values)}, expected {expected_dim}. "
+                "Refusing to display misaligned feature explanations."
+            )
+            return [], "dimension_mismatch"
+
+        # ── Group transformed attributions back to original features (Signed Sum) ──
+        # Log-odds additivity: sum of signed contributions over all encoded columns
+        # belonging to original feature f equals the net contribution of feature f.
+        grouped_shap: dict[str, float] = {f: 0.0 for f in artifacts.feature_names}
+
+        for idx, t_col in enumerate(artifacts.transformed_feature_names):
+            orig_col = artifacts.feature_mapping.get(t_col, t_col)
+            if orig_col not in grouped_shap:
+                grouped_shap[orig_col] = 0.0
+            grouped_shap[orig_col] += float(values[idx])
+
+        explanations = []
+        for feat in artifacts.feature_names:
+            raw_val = feature_dict.get(feat, 0)
+            numeric_val = (
+                float(raw_val)
+                if isinstance(raw_val, (int, float)) and not np.isnan(raw_val)
+                else 0.0
+            )
+            explanations.append(
+                FeatureExplanation(
+                    feature=feat,
+                    value=numeric_val,
+                    shapValue=round(grouped_shap.get(feat, 0.0), 6),
+                )
+            )
+
+        # Sort by absolute SHAP value descending (highest impact first)
+        explanations.sort(key=lambda x: abs(x.shap_value), reverse=True)
+        return explanations, "available"
+
+    except Exception as e:
+        logger.error(f"SHAP computation or mapping error: {e}", exc_info=True)
+        return [], "explanation_unavailable"
 
 
 def _request_to_feature_dict(request: PredictionRequest) -> dict[str, Any]:
-    """Convert a PredictionRequest to a flat feature dictionary using model feature names."""
+    """Convert a PredictionRequest to a dictionary with exact model feature names."""
     return {
         "age": request.age,
         "blood_pressure": request.blood_pressure,
@@ -163,69 +194,3 @@ def _request_to_feature_dict(request: PredictionRequest) -> dict[str, Any]:
         "pedal_edema": request.pedal_edema,
         "anemia": request.anemia,
     }
-
-
-def _compute_shap(feature_array: np.ndarray, feature_dict: dict) -> list[FeatureExplanation]:
-    """Compute SHAP values for a single instance using the loaded explainer."""
-    if artifacts.explainer is None:
-        logger.warning("SHAP explainer not loaded, returning empty explanations")
-        return []
-
-    try:
-        shap_values = artifacts.explainer.shap_values(feature_array)
-
-        # Handle different SHAP output shapes
-        if isinstance(shap_values, list):
-            # Multi-class: take CKD class (index 1)
-            values = shap_values[1][0] if len(shap_values) > 1 else shap_values[0][0]
-        elif len(shap_values.shape) == 3:
-            values = shap_values[0, :, 1]
-        else:
-            values = shap_values[0]
-
-        feature_names = artifacts.feature_names
-        explanations = []
-        for i, name in enumerate(feature_names):
-            if i < len(values):
-                val = feature_dict.get(name, 0)
-                explanations.append(FeatureExplanation(
-                    feature=name,
-                    value=float(val) if isinstance(val, (int, float)) and val is not None else 0.0,
-                    shapValue=round(float(values[i]), 6)
-                ))
-
-        # Sort by absolute SHAP value descending
-        explanations.sort(key=lambda x: abs(x.shap_value), reverse=True)
-        return explanations
-
-    except Exception as e:
-        logger.error(f"SHAP computation failed: {e}")
-        return []
-
-
-def _generate_demo_shap(feature_dict: dict, risk_score: float) -> list[FeatureExplanation]:
-    """Generate plausible-looking SHAP explanations for demo mode."""
-    demo_contributions = {
-        "serum_creatinine": 0.21 * risk_score,
-        "blood_pressure": 0.14 * risk_score,
-        "hemoglobin": -0.10 * (1 - risk_score),
-        "blood_glucose_random": 0.08 * risk_score,
-        "age": 0.06 * risk_score,
-        "albumin": -0.05 * (1 - risk_score),
-        "diabetes_mellitus": 0.07 * risk_score,
-        "hypertension": 0.05 * risk_score,
-        "blood_urea": 0.04 * risk_score,
-        "sodium": -0.03 * (1 - risk_score),
-    }
-
-    explanations = []
-    for feature, shap_val in demo_contributions.items():
-        val = feature_dict.get(feature, 0)
-        explanations.append(FeatureExplanation(
-            feature=feature,
-            value=float(val) if isinstance(val, (int, float)) and val is not None else 0.0,
-            shapValue=round(shap_val, 6)
-        ))
-
-    explanations.sort(key=lambda x: abs(x.shap_value), reverse=True)
-    return explanations

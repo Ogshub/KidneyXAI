@@ -69,14 +69,16 @@ CREATE TABLE IF NOT EXISTS assessment_features (
 
 CREATE INDEX idx_assessment_features_assessment_id ON assessment_features(assessment_id);
 
--- 5. Daily Activities (lifestyle tracking)
+-- 5. Daily Activities (lifestyle tracking & health observations)
 CREATE TABLE IF NOT EXISTS daily_activities (
     id                  BIGSERIAL       PRIMARY KEY,
     user_id             BIGINT          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     activity_date       DATE            NOT NULL,
     water_intake_liters DOUBLE PRECISION,
     exercise_minutes    INTEGER,
+    exercise_type       VARCHAR(50),        -- Walking, Running, Gym, Yoga, Cycling, etc.
     sleep_hours         DOUBLE PRECISION,
+    sleep_quality       VARCHAR(30),        -- Restful, Average, Interrupted, Poor
     salt_level          VARCHAR(20),        -- Low / Medium / High
     fast_food           BOOLEAN         DEFAULT FALSE,
     sugary_drinks       INTEGER         DEFAULT 0,
@@ -84,27 +86,40 @@ CREATE TABLE IF NOT EXISTS daily_activities (
     alcohol             BOOLEAN         DEFAULT FALSE,
     weight_kg           DOUBLE PRECISION,
     stress_level        VARCHAR(20),        -- Low / Medium / High
+    systolic_bp         INTEGER,            -- Optional systolic blood pressure (mmHg)
+    diastolic_bp        INTEGER,            -- Optional diastolic blood pressure (mmHg)
+    medication_status   VARCHAR(30)     DEFAULT 'NOT_RECORDED', -- TAKEN_AS_PRESCRIBED / MISSED / PARTIALLY_TAKEN / NOT_APPLICABLE / NOT_RECORDED
+    symptoms            TEXT,               -- Optional user-reported observations
+    personal_notes      TEXT,               -- Private journal notes
+    doctor_restrictions TEXT,               -- Documented clinical restrictions (e.g. fluid limit)
     created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT uq_user_activity_date UNIQUE (user_id, activity_date)
+    CONSTRAINT uq_user_activity_date UNIQUE (user_id, activity_date),
+    CONSTRAINT chk_medication_status CHECK (medication_status IN
+        ('TAKEN_AS_PRESCRIBED', 'MISSED', 'PARTIALLY_TAKEN', 'NOT_APPLICABLE', 'NOT_RECORDED'))
 );
 
 CREATE INDEX idx_daily_activities_user_id ON daily_activities(user_id);
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 
--- 6. Recommendations (rule-engine output)
+-- 6. Recommendations (deterministic, traceable rule-engine output)
 CREATE TABLE IF NOT EXISTS recommendations (
-    id              BIGSERIAL       PRIMARY KEY,
-    assessment_id   BIGINT          NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
-    category        VARCHAR(50)     NOT NULL,   -- Diet / Exercise / Smoking / Hydration / Medical / etc.
-    trigger_reason  VARCHAR(255)    NOT NULL,   -- e.g. "Processed-food frequency = Daily"
-    recommendation  TEXT            NOT NULL,   -- The actual guidance text
-    priority        VARCHAR(20)     NOT NULL,   -- Low / Medium / High
-    source          VARCHAR(255),               -- Reference/guideline source
-    created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                  BIGSERIAL       PRIMARY KEY,
+    assessment_id       BIGINT          NOT NULL REFERENCES assessments(id) ON DELETE CASCADE,
+    rule_id             VARCHAR(50),                -- Stable identifier: RULE-HYDR-01, RULE-SOD-01, etc.
+    category            VARCHAR(50)     NOT NULL,   -- Diet / Exercise / Smoking / Hydration / Medical / etc.
+    trigger_reason      VARCHAR(255)    NOT NULL,   -- e.g. "Water intake = 1.0 L"
+    observation_period  VARCHAR(50),                -- e.g. "Latest Daily Entry", "Baseline Profile"
+    recommendation      TEXT            NOT NULL,   -- The educational guidance text
+    priority            VARCHAR(20)     NOT NULL,   -- Low / Medium / High / Urgent
+    source              VARCHAR(255),               -- Reference/guideline source (e.g. "KDIGO 2024")
+    known_limitations   TEXT,                       -- Educational boundaries and non-diagnostic caveats
+    contraindications   TEXT,                       -- Applicable clinical exclusions
+    created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_recommendations_assessment_id ON recommendations(assessment_id);
+CREATE INDEX idx_recommendations_rule_id ON recommendations(rule_id);
 
 -- 7. Research Responses (Dataset B — college study, fully decoupled)
 CREATE TABLE IF NOT EXISTS research_responses (
@@ -135,9 +150,115 @@ CREATE TABLE IF NOT EXISTS research_responses (
     aware_risk_factors      BOOLEAN,
     monitors_bp             BOOLEAN,
     received_kidney_info    BOOLEAN,
+    shap_comprehension_score INTEGER,
+    narrative_preference_score INTEGER,
+    guideline_trust_score INTEGER,
+    actionability_score INTEGER,
 
     created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- No foreign key to users — intentionally decoupled
 CREATE INDEX idx_research_responses_role ON research_responses(role);
+
+-- V3: owner-scoped medical reports with transactional private attachments.
+CREATE TABLE IF NOT EXISTS medical_reports (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    report_date DATE NOT NULL,
+    report_type VARCHAR(30) NOT NULL CHECK (report_type IN ('bloodwork', 'urinalysis', 'imaging', 'other')),
+    lab_name VARCHAR(255),
+    doctor_name VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_medical_reports_owner_date ON medical_reports(user_id, report_date DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS medical_report_files (
+    report_id BIGINT PRIMARY KEY REFERENCES medical_reports(id) ON DELETE CASCADE,
+    object_key UUID NOT NULL UNIQUE,
+    file_name VARCHAR(255) NOT NULL,
+    media_type VARCHAR(30) NOT NULL CHECK (media_type IN ('application/pdf', 'image/png', 'image/jpeg')),
+    contents BYTEA NOT NULL CHECK (octet_length(contents) BETWEEN 1 AND 10485760)
+);
+
+CREATE TABLE IF NOT EXISTS lab_results (
+    id BIGSERIAL PRIMARY KEY,
+    report_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    parameter_name VARCHAR(100) NOT NULL,
+    original_value NUMERIC(24,10) NOT NULL CHECK (original_value >= 0),
+    original_unit VARCHAR(30) NOT NULL,
+    normalized_value NUMERIC(24,10) NOT NULL CHECK (normalized_value >= 0),
+    normalized_unit VARCHAR(30) NOT NULL,
+    reference_low NUMERIC(24,10) CHECK (reference_low >= 0),
+    reference_high NUMERIC(24,10) CHECK (reference_high >= 0),
+    recorded_at DATE NOT NULL,
+    source VARCHAR(255) NOT NULL,
+    transcription_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (report_id, user_id) REFERENCES medical_reports(id, user_id) ON DELETE CASCADE,
+    CHECK (reference_low IS NULL OR reference_high IS NULL OR reference_low <= reference_high)
+);
+CREATE INDEX IF NOT EXISTS idx_lab_results_report ON lab_results(report_id);
+CREATE INDEX IF NOT EXISTS idx_lab_results_owner_history ON lab_results(user_id, parameter_name, recorded_at DESC, id DESC);
+
+-- Application JDBC accesses these tables. Deny public Data API roles if present.
+REVOKE ALL ON medical_reports, medical_report_files, lab_results FROM PUBLIC;
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+        REVOKE ALL ON medical_reports, medical_report_files, lab_results FROM anon;
+    END IF;
+    IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+        REVOKE ALL ON medical_reports, medical_report_files, lab_results FROM authenticated;
+    END IF;
+END $$;
+ALTER TABLE medical_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE medical_report_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lab_results ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+    id TEXT PRIMARY KEY, manifest JSONB NOT NULL, content_hash TEXT NOT NULL,
+    ingested_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+    id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,
+    content TEXT NOT NULL, embedding_model TEXT NOT NULL, embedding_dimension INTEGER NOT NULL CHECK (embedding_dimension > 0)
+);
+-- Optional vector extension is enabled explicitly by the local database owner.
+DO $$ BEGIN
+    IF EXISTS (SELECT FROM pg_extension WHERE extname = 'vector') THEN
+        EXECUTE 'ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding vector';
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS ai_conversations (
+    id UUID PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_conversations_owner ON ai_conversations(user_id, updated_at DESC);
+CREATE TABLE IF NOT EXISTS ai_messages (
+    id UUID PRIMARY KEY, conversation_id UUID NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+    question TEXT NOT NULL, response JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation ON ai_messages(conversation_id, created_at, id);
+CREATE TABLE IF NOT EXISTS ai_message_sources (
+    message_id UUID NOT NULL REFERENCES ai_messages(id) ON DELETE CASCADE,
+    evidence_id TEXT NOT NULL, provenance JSONB NOT NULL, PRIMARY KEY (message_id, evidence_id)
+);
+CREATE TABLE IF NOT EXISTS ai_audit_logs (
+    message_id UUID PRIMARY KEY REFERENCES ai_messages(id) ON DELETE CASCADE,
+    decision TEXT NOT NULL CHECK (decision IN ('ANSWER','CLARIFY','ABSTAIN')),
+    reasons JSONB NOT NULL, model_config JSONB NOT NULL, latency_ms BIGINT NOT NULL
+);
+ALTER TABLE knowledge_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE knowledge_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_message_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_audit_logs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON knowledge_documents, knowledge_chunks, ai_conversations, ai_messages, ai_message_sources, ai_audit_logs FROM PUBLIC;

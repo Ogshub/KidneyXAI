@@ -27,6 +27,7 @@ Model Performance (expected):
   F1-Score : ~98.4%
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -43,7 +44,7 @@ warnings.filterwarnings("ignore")
 
 MODELS_DIR = Path(__file__).parent / "models"
 DATA_DIR   = Path(__file__).parent / "data"
-MODEL_VERSION = "v1.0"
+MODEL_VERSION = "1.0"
 
 # 24 UCI CKD features (exact order the model expects)
 NUMERICAL_FEATURES = [
@@ -298,10 +299,11 @@ def build_pipeline():
 def evaluate(pipeline, X, y):
     """10-fold stratified cross-validation evaluation."""
     from sklearn.model_selection import StratifiedKFold, cross_validate
-    from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import make_scorer, recall_score
 
     cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-    scoring = ["accuracy", "f1", "precision", "recall", "roc_auc"]
+    scoring = {name: name for name in ("accuracy", "f1", "precision", "recall", "roc_auc")}
+    scoring["specificity"] = make_scorer(recall_score, pos_label=0)
 
     print("[INFO] Running 10-fold stratified cross-validation...")
     results = cross_validate(pipeline, X, y, cv=cv, scoring=scoring,
@@ -313,6 +315,7 @@ def evaluate(pipeline, X, y):
         "precision": results["test_precision"].mean(),
         "recall":    results["test_recall"].mean(),
         "auroc":     results["test_roc_auc"].mean(),
+        "specificity": results["test_specificity"].mean(),
     }
 
     print("\n" + "=" * 55)
@@ -388,8 +391,33 @@ def benchmark_cohorts():
 
 # ─── Save Artifacts ──────────────────────────────────────────────────────────
 
+def write_evaluation_report(model_dir, metrics, labels, feature_count):
+    """Generate an evaluation report bound to the saved inference artifacts."""
+    def digest(filename):
+        with (model_dir / filename).open("rb") as stream:
+            return hashlib.file_digest(stream, "sha256").hexdigest()
+
+    report = {
+        "model_version": MODEL_VERSION,
+        "model_type": "XGBClassifier",
+        "dataset": {
+            "name": "UCI Chronic Kidney Disease Benchmark (Apollo Hospitals, 2015)",
+            "record_count": len(labels),
+            "feature_count": feature_count,
+            "class_distribution": {"ckd": int((labels == 1).sum()), "notckd": int((labels == 0).sum())},
+        },
+        "training": {"validation_protocol": "10-Fold Stratified Cross-Validation", "cv_folds": 10, "random_state": 42},
+        "metrics": {name: round(float(value), 4) for name, value in metrics.items()},
+        "artifact_hash": f"model:{digest('kidney_model.pkl')}_prep:{digest('preprocessor.pkl')}",
+        "status": "available",
+    }
+    target = model_dir / "evaluation_report.json"
+    temporary = target.with_suffix(".tmp")
+    temporary.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    temporary.replace(target)
+
 def save_artifacts(pipeline, preprocessor, explainer, feature_names,
-                   global_importance, metrics, cohort_benchmarks=None):
+                   global_importance, metrics, labels, cohort_benchmarks=None):
     """Save all model artifacts to models/ directory."""
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -414,6 +442,8 @@ def save_artifacts(pipeline, preprocessor, explainer, feature_names,
     with open(MODELS_DIR / "global_importance.json", "w") as f:
         json.dump([{"feature": name, "mean_abs_shap": val} for name, val in global_importance], f, indent=2)
     print(f"[INFO] Saved global SHAP -> {MODELS_DIR / 'global_importance.json'}")
+
+    write_evaluation_report(MODELS_DIR, metrics, labels, len(feature_names))
 
     # 6. Evaluation report
     report = f"""KidneyCare-XAI — Model Evaluation Report
@@ -488,7 +518,7 @@ def main():
 
     # 7. Save all artifacts
     save_artifacts(pipeline, preprocessor, explainer, feature_names,
-                   global_importance, metrics, cohort_benchmarks)
+                   global_importance, metrics, y, cohort_benchmarks)
 
     print("\n[SUCCESS] Training complete! All artifacts saved to models/")
     print("   The ML service will now use the real XGBoost model instead of Demo mode.")

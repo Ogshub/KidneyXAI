@@ -1,4 +1,5 @@
 import React from 'react';
+import { MedicalReports, ReportDetails, LabHistory, ReportComparison } from './pages/MedicalRecords';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -96,6 +97,12 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              <Route path="/assistant" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><MedicalReports /></ProtectedRoute>} />
+              <Route path="/reports/:id" element={<ProtectedRoute><ReportDetails /></ProtectedRoute>} />
+              <Route path="/lab-history" element={<ProtectedRoute><LabHistory /></ProtectedRoute>} />
+              <Route path="/report-comparison" element={<ProtectedRoute><ReportComparison /></ProtectedRoute>} />
 
               {/* Catch-all redirect */}
               <Route path="*" element={<Navigate to="/" replace />} />

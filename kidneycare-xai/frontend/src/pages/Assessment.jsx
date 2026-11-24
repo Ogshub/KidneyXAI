@@ -1,123 +1,95 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AssistantAction } from '../components/assistant/assistantContext';
 import { assessmentApi } from '../api';
+import { labApi } from '../api/medicalRecords';
 import { 
   HeartPulse, 
   Sparkles, 
-  AlertCircle, 
   Info, 
-  CheckCircle2, 
   FlaskConical, 
-  Activity,
   ArrowRight,
   Home,
-  ChevronDown,
-  ChevronUp,
-  ShieldCheck
 } from 'lucide-react';
 import { Button, Input, Select, Card, Alert } from '../components/common';
 
 export const Assessment = () => {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
+  const sourceReportId = search.get('fromReport');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState('HOME'); // 'HOME' | 'LAB'
-  const [showOptionalLabs, setShowOptionalLabs] = useState(false);
+  const [mode, setMode] = useState(sourceReportId ? 'LAB' : 'HOME');
 
   const initialForm = {
-    age: '45',
-    bloodPressure: '80',
-    specificGravity: '1.020',
-    albumin: '0',
-    sugar: '0',
-    redBloodCells: 'normal',
-    pusCell: 'normal',
-    pusCellClumps: 'notpresent',
-    bacteria: 'notpresent',
-    bloodGlucoseRandom: '110',
-    bloodUrea: '36',
-    serumCreatinine: '1.1',
-    sodium: '138',
-    potassium: '4.5',
-    hemoglobin: '15.2',
-    packedCellVolume: '44',
-    whiteBloodCellCount: '7500',
-    redBloodCellCount: '5.1',
-    hypertension: 'no',
-    diabetesMellitus: 'no',
-    coronaryArteryDisease: 'no',
-    appetite: 'good',
-    pedalEdema: 'no',
-    anemia: 'no',
+    age: '',
+    bloodPressure: '',
+    specificGravity: '',
+    albumin: '',
+    sugar: '',
+    redBloodCells: '',
+    pusCell: '',
+    pusCellClumps: '',
+    bacteria: '',
+    bloodGlucoseRandom: '',
+    bloodUrea: '',
+    serumCreatinine: '',
+    sodium: '',
+    potassium: '',
+    hemoglobin: '',
+    packedCellVolume: '',
+    whiteBloodCellCount: '',
+    redBloodCellCount: '',
+    hypertension: '',
+    diabetesMellitus: '',
+    coronaryArteryDisease: '',
+    appetite: '',
+    pedalEdema: '',
+    anemia: '',
   };
 
   const [form, setForm] = useState(initialForm);
+  const [prefill, setPrefill] = useState(null);
+  const [reviewedReport, setReviewedReport] = useState('');
+  const [loadingPrefill, setLoadingPrefill] = useState(false);
+  const [prefillNotice, setPrefillNotice] = useState('');
+
+  const reviewLaboratoryValues = async () => {
+    setPrefillNotice('');
+    setLoadingPrefill(true);
+    try {
+      const eligible = await labApi.assessmentInputs();
+      const filtered = Object.fromEntries(Object.entries(eligible).filter(([, item]) =>
+        !sourceReportId || String(item.reportId) === sourceReportId));
+      setPrefill(filtered);
+      const reports = new Set(Object.values(filtered).map((item) => String(item.reportId)));
+      setReviewedReport(reports.size === 1 ? [...reports][0] : '');
+    } catch {
+      setPrefillNotice('Confirmed laboratory values could not be loaded.');
+    } finally {
+      setLoadingPrefill(false);
+    }
+  };
+
+  const applyLaboratoryValues = () => {
+    setForm((current) => ({
+      ...current,
+      ...Object.fromEntries(Object.entries(prefill).filter(([, item]) => String(item.reportId) === reviewedReport)
+        .map(([field, result]) => [field, String(result.normalizedValue)])),
+    }));
+    setMode('LAB');
+    setPrefill(null);
+    setPrefillNotice('Values copied. Review the date, units and all remaining inputs before submitting.');
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     if (error) setError('');
   };
 
-  const loadSampleHealthy = () => {
-    setForm({
-      age: '32',
-      bloodPressure: '75',
-      specificGravity: '1.025',
-      albumin: '0',
-      sugar: '0',
-      redBloodCells: 'normal',
-      pusCell: 'normal',
-      pusCellClumps: 'notpresent',
-      bacteria: 'notpresent',
-      bloodGlucoseRandom: '95',
-      bloodUrea: '25',
-      serumCreatinine: '0.9',
-      sodium: '140',
-      potassium: '4.2',
-      hemoglobin: '15.6',
-      packedCellVolume: '46',
-      whiteBloodCellCount: '6800',
-      redBloodCellCount: '5.2',
-      hypertension: 'no',
-      diabetesMellitus: 'no',
-      coronaryArteryDisease: 'no',
-      appetite: 'good',
-      pedalEdema: 'no',
-      anemia: 'no',
-    });
-  };
-
-  const loadSampleElevatedRisk = () => {
-    setForm({
-      age: '58',
-      bloodPressure: '90',
-      specificGravity: '1.010',
-      albumin: '2',
-      sugar: '1',
-      redBloodCells: 'abnormal',
-      pusCell: 'abnormal',
-      pusCellClumps: 'present',
-      bacteria: 'notpresent',
-      bloodGlucoseRandom: '165',
-      bloodUrea: '65',
-      serumCreatinine: '2.4',
-      sodium: '132',
-      potassium: '5.3',
-      hemoglobin: '10.8',
-      packedCellVolume: '33',
-      whiteBloodCellCount: '10200',
-      redBloodCellCount: '3.8',
-      hypertension: 'yes',
-      diabetesMellitus: 'yes',
-      coronaryArteryDisease: 'no',
-      appetite: 'poor',
-      pedalEdema: 'yes',
-      anemia: 'yes',
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || mode !== 'LAB') return;
     setError('');
     setLoading(true);
 
@@ -129,10 +101,10 @@ export const Assessment = () => {
         specificGravity: form.specificGravity ? parseFloat(form.specificGravity) : null,
         albumin: form.albumin ? parseFloat(form.albumin) : null,
         sugar: form.sugar ? parseFloat(form.sugar) : null,
-        redBloodCells: form.redBloodCells,
-        pusCell: form.pusCell,
-        pusCellClumps: form.pusCellClumps,
-        bacteria: form.bacteria,
+        redBloodCells: form.redBloodCells || null,
+        pusCell: form.pusCell || null,
+        pusCellClumps: form.pusCellClumps || null,
+        bacteria: form.bacteria || null,
         bloodGlucoseRandom: form.bloodGlucoseRandom ? parseFloat(form.bloodGlucoseRandom) : null,
         bloodUrea: form.bloodUrea ? parseFloat(form.bloodUrea) : null,
         serumCreatinine: form.serumCreatinine ? parseFloat(form.serumCreatinine) : null,
@@ -142,20 +114,22 @@ export const Assessment = () => {
         packedCellVolume: form.packedCellVolume ? parseFloat(form.packedCellVolume) : null,
         whiteBloodCellCount: form.whiteBloodCellCount ? parseFloat(form.whiteBloodCellCount) : null,
         redBloodCellCount: form.redBloodCellCount ? parseFloat(form.redBloodCellCount) : null,
-        hypertension: form.hypertension,
-        diabetesMellitus: form.diabetesMellitus,
-        coronaryArteryDisease: form.coronaryArteryDisease,
-        appetite: form.appetite,
-        pedalEdema: form.pedalEdema,
-        anemia: form.anemia,
+        hypertension: form.hypertension || null,
+        diabetesMellitus: form.diabetesMellitus || null,
+        coronaryArteryDisease: form.coronaryArteryDisease || null,
+        appetite: form.appetite || null,
+        pedalEdema: form.pedalEdema || null,
+        anemia: form.anemia || null,
       };
 
       const result = await assessmentApi.createAssessment(payload);
       // Navigate to results screen with the returned assessment
       navigate(`/assessment/result/${result.id}`, { state: { assessment: result } });
     } catch (err) {
-      console.error('Assessment submission error:', err);
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to process clinical assessment with ML service. Please ensure the backend and ML service are active.';
+      const status = err.response?.status;
+      const msg = status === 401 ? 'Your session expired. Sign in to continue.'
+        : status === 400 || status === 422 ? 'Review the recorded inputs, units and accepted values.'
+        : 'The research model is currently unavailable. Try again shortly.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -164,90 +138,59 @@ export const Assessment = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-teal-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <FlaskConical className="w-4 h-4" />
-            Machine Learning Inference
-          </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Kidney Disease Risk Assessment
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
-            {mode === 'HOME'
-              ? 'Quick at-home screener based on your vitals, symptoms, and lifestyle — no lab test required.'
-              : 'Enter your clinical lab measurements to run the full 24-feature XGBoost/SHAP decision-support engine.'}
-          </p>
+      <header className="space-y-3">
+        <h1 className="text-3xl font-bold">Kidney Assessment</h1>
+        <p>Review daily observations or enter laboratory records for a research assessment.</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link className="underline" to="/history">Assessment history</Link>
+          <AssistantAction question="What information is used in a laboratory-based assessment?">Ask about the assessment</AssistantAction>
         </div>
+      </header>
 
-        {/* Preset Sample Fillers (visible in Lab mode) */}
-        {mode === 'LAB' && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={loadSampleHealthy}>
-              Load Normal Sample
-            </Button>
-            <Button size="sm" variant="secondary" onClick={loadSampleElevatedRisk}>
-              Load Elevated Sample
-            </Button>
-          </div>
-        )}
+      <div className="grid gap-2 sm:grid-cols-2" aria-label="Assessment mode">
+        <Button variant={mode === 'HOME' ? 'primary' : 'secondary'} aria-pressed={mode === 'HOME'} icon={Home}
+          onClick={() => setMode('HOME')}>Lifestyle &amp; Health Review</Button>
+        <Button variant={mode === 'LAB' ? 'primary' : 'secondary'} aria-pressed={mode === 'LAB'} icon={FlaskConical}
+          onClick={() => setMode('LAB')}>Laboratory-Based Research Assessment</Button>
       </div>
 
-      {/* Mode Selector */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1.5 bg-slate-100 dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700">
-        <button
-          type="button"
-          onClick={() => setMode('HOME')}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
-            mode === 'HOME'
-              ? 'bg-white dark:bg-neutral-900 text-teal-600 dark:text-teal-400 shadow-sm border border-slate-200/80 dark:border-neutral-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Home className="w-4 h-4" />
-          <span>Home Lifestyle & Symptom Check</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 font-semibold ml-1">
-            No Lab Test Needed
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMode('LAB')}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm transition-all ${
-            mode === 'LAB'
-              ? 'bg-white dark:bg-neutral-900 text-teal-600 dark:text-teal-400 shadow-sm border border-slate-200/80 dark:border-neutral-700'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <FlaskConical className="w-4 h-4" />
-          <span>Clinical Lab Report Analyzer</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-neutral-700 text-slate-800 dark:text-slate-200 font-semibold ml-1">
-            Full 24 Markers
-          </span>
-        </button>
-      </div>
-
-      {mode === 'HOME' && (
-        <div className="p-4 rounded-2xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-teal-950 dark:text-teal-200 leading-relaxed">
-            <strong className="font-semibold text-teal-900 dark:text-teal-100">At-Home Self-Screening Mode:</strong> You do not need hospital blood tests or urine reports to use this! Answer simple questions about your age, resting blood pressure, physical symptoms, and health history. The AI automatically applies standard healthy clinical medians for unmeasured lab metrics.
-          </div>
+      {mode === 'HOME' ? <Card title="Review your daily observations">
+        <p>Use your journal to record symptoms, sleep, activity and medication routines. The journal can help you organize what to discuss with a clinician.</p>
+        <p className="mt-3 text-sm">Before an appointment, consider noting when symptoms started, what has changed and any instructions from your care team.</p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <Link className="underline" to="/tracker">Open daily journal</Link>
+          <Link className="underline" to="/recommendations">View educational guidance</Link>
         </div>
-      )}
-
-      {error && (
-        <Alert type="danger" onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
-
+      </Card> : <>
+      <Alert variant="info">This assessment uses a model trained on a research dataset. Age and diastolic pressure are required. Leave unavailable observations blank. The model applies preprocessing learned during training to missing inputs.</Alert>
+      {error && <Alert variant="danger" onClose={() => setError('')}>{error}</Alert>}
       {/* Form */}
+      <Card className="space-y-3">
+        <Button variant="secondary" onClick={reviewLaboratoryValues} disabled={loadingPrefill}>
+          {loadingPrefill ? 'Loading saved results…' : 'Review saved laboratory values'}
+        </Button>
+        {prefillNotice && <p role="status">{prefillNotice}</p>}
+        {prefill && (Object.keys(prefill).length ? <>
+          <p>Only compatible values you confirmed are eligible. Choose one source report and review the dates and units.</p>
+          <Select name="assessment-source-report" label="Source report to copy" value={reviewedReport}
+            onChange={(event) => setReviewedReport(event.target.value)} options={[
+              { value: '', label: 'Choose a source report' },
+              ...[...new Map(Object.values(prefill).map((item) => [String(item.reportId), item])).entries()].map(([id, item]) =>
+                ({ value: id, label: `Report #${id} · ${item.source}` })),
+            ]} />
+          <ul className="list-disc pl-5">
+            {Object.values(prefill).map((item) => <li key={item.id}>
+              {item.parameterName.replaceAll('_', ' ')} · {item.normalizedValue} {item.normalizedUnit} · {item.recordedAt} · {item.source} · Confirmed by user · <Link className="underline" to={"/reports/" + item.reportId}>Source report</Link>
+            </li>)}
+          </ul>
+          <Button onClick={applyLaboratoryValues} disabled={!reviewedReport}>Confirm and copy values</Button>
+          <Button variant="secondary" onClick={() => setPrefill(null)}>Cancel</Button>
+        </> : <p role="status">No eligible confirmed measurements are available.</p>)}
+      </Card>
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Section 1: Vitals & Demographics */}
-        <Card title="1. Demographics & Blood Pressure" icon={HeartPulse}>
+        <Card title="Demographics & Blood Pressure" icon={HeartPulse}>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <Input
               label="Age (Years)"
@@ -260,12 +203,12 @@ export const Assessment = () => {
               required
             />
             <Input
-              label="Resting Blood Pressure (mm/Hg)"
+              label="Diastolic Blood Pressure (mmHg)"
               type="number"
               name="bloodPressure"
               value={form.bloodPressure}
               onChange={handleChange}
-              helperText="Diastolic / resting (e.g., 80 mm/Hg)"
+              helperText="Enter the lower blood pressure reading."
               min="40"
               max="200"
               required
@@ -276,6 +219,7 @@ export const Assessment = () => {
               value={form.hypertension}
               onChange={handleChange}
               options={[
+                { value: '', label: 'Not recorded' },
                 { value: 'no', label: 'No' },
                 { value: 'yes', label: 'Yes' },
               ]}
@@ -284,7 +228,7 @@ export const Assessment = () => {
         </Card>
 
         {/* Section 2: Symptoms & Medical History */}
-        <Card title="2. Early Warning Signs & Health History" icon={Sparkles}>
+        <Card title="Recorded Observations & Health History" icon={Sparkles}>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             <Select
               label="Swollen Feet / Ankles (Edema)"
@@ -292,6 +236,7 @@ export const Assessment = () => {
               value={form.pedalEdema}
               onChange={handleChange}
               options={[
+                { value: '', label: 'Not recorded' },
                 { value: 'no', label: 'No' },
                 { value: 'yes', label: 'Yes (Noticeable swelling)' },
               ]}
@@ -302,18 +247,20 @@ export const Assessment = () => {
               value={form.appetite}
               onChange={handleChange}
               options={[
+                { value: '', label: 'Not recorded' },
                 { value: 'good', label: 'Good / Normal' },
                 { value: 'poor', label: 'Poor (Loss of appetite)' },
               ]}
             />
             <Select
-              label="Fatigue / Anemia Signs"
+              label="Recorded Anemia"
               name="anemia"
               value={form.anemia}
               onChange={handleChange}
               options={[
-                { value: 'no', label: 'No (Normal energy)' },
-                { value: 'yes', label: 'Yes (Frequent weakness / fatigue)' },
+                { value: '', label: 'Not recorded' },
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Yes' },
               ]}
             />
             <Select
@@ -322,16 +269,18 @@ export const Assessment = () => {
               value={form.diabetesMellitus}
               onChange={handleChange}
               options={[
+                { value: '', label: 'Not recorded' },
                 { value: 'no', label: 'No' },
                 { value: 'yes', label: 'Yes' },
               ]}
             />
             <Select
-              label="Heart / Artery Disease"
+              label="Coronary Artery Disease"
               name="coronaryArteryDisease"
               value={form.coronaryArteryDisease}
               onChange={handleChange}
               options={[
+                { value: '', label: 'Not recorded' },
                 { value: 'no', label: 'No' },
                 { value: 'yes', label: 'Yes' },
               ]}
@@ -339,83 +288,9 @@ export const Assessment = () => {
           </div>
         </Card>
 
-        {/* Home Mode: Optional Collapsible Lab Values */}
-        {mode === 'HOME' && (
-          <div className="border border-slate-200 dark:border-neutral-800 rounded-2xl p-5 bg-white dark:bg-neutral-900 shadow-sm space-y-4">
-            <button
-              type="button"
-              onClick={() => setShowOptionalLabs(!showOptionalLabs)}
-              className="flex items-center justify-between w-full text-left font-semibold text-slate-800 dark:text-slate-200 text-sm hover:text-teal-600 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FlaskConical className="w-4 h-4 text-teal-600" />
-                <span>Have any recent blood or urine test numbers? (Optional)</span>
-              </div>
-              {showOptionalLabs ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-            </button>
-            <p className="text-xs text-slate-500">
-              If you leave this closed, our algorithm automatically uses standard healthy median baselines for lab parameters.
-            </p>
-
-            {showOptionalLabs && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 pt-3 border-t border-slate-100 dark:border-neutral-800">
-                <Input
-                  label="Serum Creatinine (mg/dL)"
-                  type="number"
-                  step="0.1"
-                  name="serumCreatinine"
-                  value={form.serumCreatinine}
-                  onChange={handleChange}
-                  helperText="Normal: 0.6 – 1.3 mg/dL"
-                />
-                <Input
-                  label="Blood Urea / BUN (mg/dL)"
-                  type="number"
-                  step="0.1"
-                  name="bloodUrea"
-                  value={form.bloodUrea}
-                  onChange={handleChange}
-                  helperText="Normal: 15 – 45 mg/dL"
-                />
-                <Input
-                  label="Hemoglobin (g/dL)"
-                  type="number"
-                  step="0.1"
-                  name="hemoglobin"
-                  value={form.hemoglobin}
-                  onChange={handleChange}
-                  helperText="Normal: 13.5 – 17.5 g/dL"
-                />
-                <Input
-                  label="Random Blood Sugar (mg/dL)"
-                  type="number"
-                  step="1"
-                  name="bloodGlucoseRandom"
-                  value={form.bloodGlucoseRandom}
-                  onChange={handleChange}
-                  helperText="Normal: < 140 mg/dL"
-                />
-                <Select
-                  label="Urine Albumin (Protein)"
-                  name="albumin"
-                  value={form.albumin}
-                  onChange={handleChange}
-                  options={[
-                    { value: '0', label: '0 (Nil / Normal)' },
-                    { value: '1', label: '1 (Trace / +)' },
-                    { value: '2', label: '2 (++)' },
-                    { value: '3', label: '3 (+++)' },
-                  ]}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Lab Mode: Full Detailed Clinical Panels */}
         {mode === 'LAB' && (
           <>
-            <Card title="3. Renal & Blood Chemistry Panel" icon={FlaskConical}>
+            <Card title="Blood Chemistry & Blood Counts" icon={FlaskConical}>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <Input
                   label="Serum Creatinine (mg/dL)"
@@ -424,7 +299,6 @@ export const Assessment = () => {
                   name="serumCreatinine"
                   value={form.serumCreatinine}
                   onChange={handleChange}
-                  helperText="Normal: 0.6 – 1.3 mg/dL"
                 />
                 <Input
                   label="Blood Urea (mg/dL)"
@@ -433,7 +307,6 @@ export const Assessment = () => {
                   name="bloodUrea"
                   value={form.bloodUrea}
                   onChange={handleChange}
-                  helperText="Normal: 15 – 45 mg/dL"
                 />
                 <Input
                   label="Hemoglobin (g/dL)"
@@ -442,7 +315,6 @@ export const Assessment = () => {
                   name="hemoglobin"
                   value={form.hemoglobin}
                   onChange={handleChange}
-                  helperText="Normal: 13.5 – 17.5 g/dL"
                 />
                 <Input
                   label="Random Blood Glucose (mg/dL)"
@@ -451,7 +323,6 @@ export const Assessment = () => {
                   name="bloodGlucoseRandom"
                   value={form.bloodGlucoseRandom}
                   onChange={handleChange}
-                  helperText="Normal: < 140 mg/dL"
                 />
                 <Input
                   label="Serum Sodium (mEq/L)"
@@ -460,7 +331,6 @@ export const Assessment = () => {
                   name="sodium"
                   value={form.sodium}
                   onChange={handleChange}
-                  helperText="Normal: 135 – 145 mEq/L"
                 />
                 <Input
                   label="Serum Potassium (mEq/L)"
@@ -469,7 +339,6 @@ export const Assessment = () => {
                   name="potassium"
                   value={form.potassium}
                   onChange={handleChange}
-                  helperText="Normal: 3.5 – 5.0 mEq/L"
                 />
                 <Input
                   label="Packed Cell Volume (PCV %)"
@@ -478,7 +347,6 @@ export const Assessment = () => {
                   name="packedCellVolume"
                   value={form.packedCellVolume}
                   onChange={handleChange}
-                  helperText="Normal: 40 – 50%"
                 />
                 <Input
                   label="White Blood Cell Count"
@@ -487,7 +355,6 @@ export const Assessment = () => {
                   name="whiteBloodCellCount"
                   value={form.whiteBloodCellCount}
                   onChange={handleChange}
-                  helperText="Normal: 4,000 – 11,000 /µL"
                 />
                 <Input
                   label="Red Blood Cell Count (M/µL)"
@@ -496,12 +363,11 @@ export const Assessment = () => {
                   name="redBloodCellCount"
                   value={form.redBloodCellCount}
                   onChange={handleChange}
-                  helperText="Normal: 4.5 – 5.9 M/µL"
                 />
               </div>
             </Card>
 
-            <Card title="4. Urinalysis Parameters" icon={Activity}>
+            <Card title="Urinalysis" icon={FlaskConical}>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                 <Select
                   label="Specific Gravity"
@@ -509,6 +375,7 @@ export const Assessment = () => {
                   value={form.specificGravity}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: '1.005', label: '1.005' },
                     { value: '1.010', label: '1.010' },
                     { value: '1.015', label: '1.015' },
@@ -522,6 +389,7 @@ export const Assessment = () => {
                   value={form.albumin}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: '0', label: '0 (Nil)' },
                     { value: '1', label: '1 (Trace / +)' },
                     { value: '2', label: '2 (++)' },
@@ -536,6 +404,7 @@ export const Assessment = () => {
                   value={form.sugar}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: '0', label: '0 (Nil)' },
                     { value: '1', label: '1 (+)' },
                     { value: '2', label: '2 (++)' },
@@ -549,6 +418,7 @@ export const Assessment = () => {
                   value={form.redBloodCells}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: 'normal', label: 'Normal' },
                     { value: 'abnormal', label: 'Abnormal' },
                   ]}
@@ -559,6 +429,7 @@ export const Assessment = () => {
                   value={form.pusCell}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: 'normal', label: 'Normal' },
                     { value: 'abnormal', label: 'Abnormal' },
                   ]}
@@ -569,6 +440,7 @@ export const Assessment = () => {
                   value={form.pusCellClumps}
                   onChange={handleChange}
                   options={[
+                    { value: '', label: 'Not recorded' },
                     { value: 'notpresent', label: 'Not Present' },
                     { value: 'present', label: 'Present' },
                   ]}
@@ -581,7 +453,7 @@ export const Assessment = () => {
         <div className="p-4 rounded-xl bg-slate-100 dark:bg-neutral-800 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-3">
           <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <div>
-            The system computes probability of Chronic Kidney Disease (CKD) risk, generates personalized clinical & lifestyle recommendations, and runs TreeSHAP attribution to reveal which factors influence your score.
+            The model estimates a benchmark classification from recorded inputs. TreeSHAP explains how each input contributed to the model output. Discuss medical questions with a qualified clinician.
           </div>
         </div>
 
@@ -593,10 +465,11 @@ export const Assessment = () => {
             icon={ArrowRight}
             className="w-full sm:w-auto shadow-lg shadow-teal-600/20"
           >
-            {mode === 'HOME' ? 'Calculate My Kidney Risk' : 'Compute Risk & SHAP Explanation'}
+            {loading ? 'Running research assessment…' : 'Run research assessment'}
           </Button>
         </div>
       </form>
+      </>}
     </div>
   );
 };

@@ -30,8 +30,14 @@ public class Activity {
     @Column(name = "exercise_minutes")
     private Integer exerciseMinutes;
 
+    @Column(name = "exercise_type", length = 50)
+    private String exerciseType;
+
     @Column(name = "sleep_hours")
     private Double sleepHours;
+
+    @Column(name = "sleep_quality", length = 30)
+    private String sleepQuality;
 
     @Column(name = "salt_level", length = 20)
     private String saltLevel;
@@ -55,6 +61,25 @@ public class Activity {
 
     @Column(name = "stress_level", length = 20)
     private String stressLevel;
+
+    @Column(name = "systolic_bp")
+    private Integer systolicBp;
+
+    @Column(name = "diastolic_bp")
+    private Integer diastolicBp;
+
+    @Column(name = "medication_status", length = 30)
+    @Builder.Default
+    private String medicationStatus = "NOT_RECORDED";
+
+    @Column(name = "symptoms", columnDefinition = "TEXT")
+    private String symptoms;
+
+    @Column(name = "personal_notes", columnDefinition = "TEXT")
+    private String personalNotes;
+
+    @Column(name = "doctor_restrictions", columnDefinition = "TEXT")
+    private String doctorRestrictions;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

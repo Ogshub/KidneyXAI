@@ -3,20 +3,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Alert } from '../components/common';
-import { 
-  HeartPulse, 
-  UserPlus, 
-  ShieldCheck, 
-  Sun, 
-  Moon, 
-  ArrowLeft, 
-  Palette, 
-  Mail, 
-  Lock, 
-  User, 
-  Eye, 
-  EyeOff, 
-  CheckCircle2, 
+import {
+  HeartPulse,
+  UserPlus,
+  ShieldCheck,
+  Sun,
+  Moon,
+  ArrowLeft,
+  Palette,
+  Mail,
+  Lock,
+  User,
+  Eye,
+  EyeOff,
+  CheckCircle2,
   Sparkles,
   Activity,
   ShieldAlert
@@ -160,7 +160,7 @@ export const Register = () => {
             },
             {
               title: 'Explainable AI with TreeSHAP',
-              desc: 'Never guess what drove a prediction. Every score is dissected into positive and negative clinical feature weights.',
+              desc: 'See how recorded inputs contributed to the research classification.',
               icon: Activity,
             },
             {
@@ -208,7 +208,7 @@ export const Register = () => {
         {/* Bottom Trust Strip */}
         <div className="relative z-10 pt-4 border-t border-slate-200/80 dark:border-slate-800">
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Trained on multi-cohort clinical datasets from UCI Machine Learning Repository, PubMed Central, and Kaggle.
+            The prediction model was trained on the UCI Chronic Kidney Disease benchmark.
           </p>
         </div>
       </section>

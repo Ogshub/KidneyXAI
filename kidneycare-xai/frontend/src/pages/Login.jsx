@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { SESSION_EXPIRED_MESSAGE } from '../context/sessionStorage';
 import { useTheme } from '../context/ThemeContext';
 import { Alert } from '../components/common';
-import { 
-  HeartPulse, 
-  LogIn, 
-  Shield, 
-  Activity, 
-  Sun, 
-  Moon, 
-  ArrowLeft, 
-  Palette, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Sparkles, 
-  CheckCircle2, 
-  TrendingUp, 
+import {
+  HeartPulse,
+  LogIn,
+  Shield,
+  Activity,
+  Sun,
+  Moon,
+  ArrowLeft,
+  Palette,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  CheckCircle2,
+  TrendingUp,
   Award
 } from 'lucide-react';
 
@@ -54,7 +55,7 @@ export const Login = () => {
       await login({ email: formData.email.trim(), password: formData.password });
       navigate(from, { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
+
       let msg = 'Invalid email or password. Please check your credentials and try again.';
       if (err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout')) {
         msg = 'The cloud server took longer to respond while spinning up from sleep. It is now warm — please click Sign In again!';
@@ -227,7 +228,7 @@ export const Login = () => {
 
             <p className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-              <span>Every individual prediction delivers deterministic feature weights and KDIGO-aligned clinical interventions.</span>
+              <span>Research assessments explain the inputs that influenced the model output.</span>
             </p>
           </div>
         </div>
@@ -265,10 +266,10 @@ export const Login = () => {
                   isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'
                 }`}
               >
-                3,047
+                400
               </p>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Multi-Cohort Cases
+                UCI Benchmark Records
               </p>
             </div>
           </div>
@@ -346,6 +347,12 @@ export const Login = () => {
           </div>
 
           {/* Error display */}
+          {new URLSearchParams(location.search).get('reason') === 'session-expired' && (
+            <Alert variant="warning">{SESSION_EXPIRED_MESSAGE}</Alert>
+          )}
+          {new URLSearchParams(location.search).get('reason') === 'account-deleted' && (
+            <Alert variant="success">Your account and associated records were deleted.</Alert>
+          )}
           {error && (
             <Alert type="danger" className="mb-5" onClose={() => setError('')}>
               {error}

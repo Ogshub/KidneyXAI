@@ -25,8 +25,12 @@ public class DashboardResponse {
     private String prediction;
     private LocalDateTime lastAssessmentDate;
 
-    // ── Lifestyle Progress ──
-    private Integer lifestyleScore;  // 0–100 app metric
+    // ── Lifestyle Progress & Habit Observations ──
+    @Deprecated
+    private Integer lifestyleScore;  // Deprecated: unvalidated historical heuristic score
+    private Double journalCompletionRate; // 0-100% completion in last 7 days
+    private Integer recordedDaysLast7;
+    private String descriptiveProgress; // Non-clinical descriptive progress summary
 
     // ── Today's Activity ──
     private ActivityResponse todayActivity;

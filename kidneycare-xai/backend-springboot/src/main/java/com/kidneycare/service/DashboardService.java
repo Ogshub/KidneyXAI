@@ -87,11 +87,14 @@ public class DashboardService {
                 .collect(Collectors.toList());
         dashboard.activityTrend(activityTrend);
 
-        // ── Lifestyle Score ──
+        // ── Lifestyle Progress & Habit Observations ──
         List<Activity> recentActivities = activityRepository
                 .findByUserIdAndActivityDateBetweenOrderByActivityDateAsc(userId,
-                        LocalDate.now().minusDays(7), LocalDate.now());
-        dashboard.lifestyleScore(LifestyleScoreCalculator.calculate(recentActivities));
+                        LocalDate.now().minusDays(6), LocalDate.now());
+        dashboard.lifestyleScore(LifestyleScoreCalculator.calculate(recentActivities))
+                .recordedDaysLast7(recentActivities.size())
+                .journalCompletionRate(LifestyleScoreCalculator.calculateJournalCompletion(recentActivities, 7))
+                .descriptiveProgress(LifestyleScoreCalculator.describeProgress(recentActivities));
 
         // ── Risk History ──
         List<DashboardResponse.RiskHistoryPoint> riskHistory = assessmentRepository

@@ -4,18 +4,27 @@ KidneyCare-XAI — ML Service (FastAPI)
 Endpoints:
   POST /predict     → risk prediction + SHAP explanations
   GET  /model-info  → global feature importance + model metadata
+  GET  /evaluate    → structured evaluation metrics from evaluation_report.json
   GET  /health      → health check
 
 This service is called ONLY by Spring Boot's MlService (Java HTTP client).
 React never calls this directly.
+
+Security: If ML_INTERNAL_SECRET is set, all non-/health requests require
+the X-Internal-Secret header to match (SEC-02).
 """
+import json
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .config import settings
+from .assistant import router as assistant_router
 from .model_loader import artifacts
 from .predictor import predict
 from .schemas import (
@@ -53,11 +62,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="KidneyCare-XAI ML Service",
     description="ML prediction + SHAP explainability service for kidney disease risk assessment",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# CORS (only needed if this service is ever called directly — normally behind Spring Boot)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -66,6 +75,68 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ── SEC-02: Internal secret middleware ──
+app.include_router(assistant_router)
+
+@app.middleware("http")
+async def internal_secret_middleware(request: Request, call_next):
+    """
+    Reject requests that don't carry the correct X-Internal-Secret header
+    when ML_INTERNAL_SECRET is configured.
+    Health check is always public so orchestration tools can poll it.
+    """
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    secret = settings.ml_internal_secret
+    if secret:  # enforcement only when secret is configured
+        provided = request.headers.get("X-Internal-Secret", "")
+        if provided != secret:
+            logger.warning(
+                f"Rejected unauthenticated request to {request.url.path} "
+                f"from {request.client.host if request.client else 'unknown'}"
+            )
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Forbidden: missing or invalid internal secret"},
+            )
+
+    return await call_next(request)
+
+
+# ── Helper: load evaluation report JSON ──────────────────────────────────────
+
+def _load_evaluation_report() -> Optional[dict]:
+    """Return evaluation data only when it describes the loaded artifact pair."""
+    if not artifacts.is_loaded:
+        return None
+
+    try:
+        data = json.loads((settings.model_dir / "evaluation_report.json").read_text(encoding="utf-8"))
+        metrics = data["metrics"]
+        if (
+            data["model_version"] != artifacts.model_version
+            or data["model_type"] != artifacts.model_type
+            or data["status"] != "available"
+            or not isinstance(data["dataset"]["name"], str)
+            or type(data["dataset"]["record_count"]) is not int
+            or not isinstance(data["dataset"]["class_distribution"], dict)
+            or not isinstance(data["training"]["validation_protocol"], str)
+            or type(data["training"]["cv_folds"]) is not int
+            or any(
+                type(metrics[key]) not in (int, float) or not 0 <= metrics[key] <= 1
+                for key in ("accuracy", "f1_score", "precision", "recall", "auroc", "specificity")
+            )
+            or data["artifact_hash"] != artifacts.evaluation_fingerprint
+            or data["artifact_hash"] != artifacts.current_evaluation_fingerprint()
+        ):
+            logger.warning("Evaluation report does not match the loaded model artifacts")
+            return None
+        return data
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.warning("Evaluation report unavailable or malformed")
+        return None
 
 # ── Endpoints ──────────────────────────────────────────────
 
@@ -82,22 +153,24 @@ async def predict_risk(request: PredictionRequest):
         - prediction: "ckd" or "notckd"
         - explanations: per-feature SHAP values sorted by |SHAP| descending
         - modelVersion: version of the model that produced this result
+        - isDemoMode: true when no trained model is available
     """
+    if not artifacts.is_loaded:
+        raise HTTPException(status_code=503, detail="Trained model artifact is unavailable")
+
     try:
-        logger.info(f"Prediction request received (age={request.age}, bp={request.blood_pressure})")
         result = predict(request)
-        logger.info(f"Prediction: {result.prediction}, score={result.risk_score}")
         return result
     except Exception as e:
-        logger.error(f"Prediction failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error("Prediction failed (%s)", type(e).__name__)
+        raise HTTPException(status_code=500, detail="Prediction failed")
 
 
 @app.get("/model-info", response_model=ModelInfoResponse)
 async def get_model_info():
     """
     Return global model metadata and pre-computed feature importance.
-    Uses mean(|SHAP|) values computed during training.
+    Uses mean(|SHAP|) values computed during training (from global_importance.json).
     Used for the research paper's global SHAP analysis and dashboard.
     """
     global_importance = []
@@ -115,6 +188,7 @@ async def get_model_info():
         modelType=artifacts.model_type if artifacts.is_loaded else "DemoMode",
         featureNames=artifacts.feature_names,
         globalFeatureImportance=global_importance,
+        isDemoMode=not artifacts.is_loaded,
     )
 
 
@@ -128,36 +202,71 @@ async def health_check():
     )
 
 
-
 @app.get("/evaluate", response_model=ModelEvaluationResponse)
 async def evaluate_model():
     """
-    Return statistical validation benchmarks and global feature importance (H1).
-    Used for IEEE paper reporting and model governance dashboards.
+    Return structured evaluation metrics loaded from evaluation_report.json.
+    This file is generated by the training pipeline — no values are hardcoded.
+
+    Returns metrics_unavailable status when:
+    - evaluation_report.json is absent
+    - The file is malformed
+    - The report's model_version does not match the loaded model
     """
-    top_features = [
-        FeatureExplanation(feature="serum_creatinine", value=1.2, shapValue=0.285),
-        FeatureExplanation(feature="specific_gravity", value=1.020, shapValue=-0.194),
-        FeatureExplanation(feature="albumin", value=2.0, shapValue=0.176),
-        FeatureExplanation(feature="blood_glucose_random", value=140.0, shapValue=0.142),
-        FeatureExplanation(feature="hemoglobin", value=12.0, shapValue=-0.128),
-        FeatureExplanation(feature="blood_pressure", value=130.0, shapValue=0.115),
-        FeatureExplanation(feature="hypertension", value=1.0, shapValue=0.098),
-        FeatureExplanation(feature="diabetes_mellitus", value=1.0, shapValue=0.087),
-        FeatureExplanation(feature="blood_urea", value=42.0, shapValue=0.076),
-        FeatureExplanation(feature="age", value=55.0, shapValue=0.062),
-    ]
+    report = _load_evaluation_report()
+
+    if report is None:
+        # Return explicit unavailable status — never substitute hardcoded values
+        return ModelEvaluationResponse(
+            status="metrics_unavailable",
+            modelVersion=artifacts.model_version if artifacts.is_loaded else "demo",
+            modelType=artifacts.model_type if artifacts.is_loaded else "unknown",
+            datasetName=None,
+            datasetRecordCount=None,
+            classDistribution=None,
+            validationProtocol=None,
+            cvFolds=None,
+            accuracy=None,
+            auroc=None,
+            f1Score=None,
+            precision=None,
+            recall=None,
+            specificity=None,
+            artifactHash=None,
+            trainingDate=None,
+            isDemoMode=not artifacts.is_loaded,
+        )
+
+    # Extract metrics from report (all Optional — no defaults if key missing)
+    metrics = report.get("metrics", {})
+    dataset_info = report.get("dataset", {})
+    training_info = report.get("training", {})
+
+    top_features = []
+    for item in artifacts.global_importance[:10]:
+        top_features.append(FeatureExplanation(
+            feature=item["feature"],
+            value=0.0,
+            shapValue=round(item["mean_abs_shap"], 6),
+        ))
 
     return ModelEvaluationResponse(
-        modelVersion=artifacts.model_version if artifacts.is_loaded else "v1.0 (XGBoost)",
-        modelType=artifacts.model_type if artifacts.is_loaded else "XGBoostClassifier + TreeSHAP",
-        datasetName="Multi-Cohort Synthesis (3,047 patient records across UCI Benchmark, PMC13092092 & Kaggle Cohorts)",
-        accuracy=0.9850,
-        auroc=0.9981,
-        f1Score=0.9881,
-        precision=0.9849,
-        recall=0.9920,
-        cvFolds=10,
-        inferenceLatencyMs=12.4,
-        topGlobalFeatures=top_features,
+        status="available",
+        modelVersion=report.get("model_version"),
+        modelType=report.get("model_type"),
+        datasetName=dataset_info.get("name"),
+        datasetRecordCount=dataset_info.get("record_count"),
+        classDistribution=dataset_info.get("class_distribution"),
+        validationProtocol=training_info.get("validation_protocol"),
+        cvFolds=training_info.get("cv_folds"),
+        accuracy=metrics.get("accuracy"),
+        auroc=metrics.get("auroc"),
+        f1Score=metrics.get("f1_score"),
+        precision=metrics.get("precision"),
+        recall=metrics.get("recall"),
+        specificity=metrics.get("specificity"),
+        artifactHash=report.get("artifact_hash"),
+        trainingDate=report.get("training_date"),
+        isDemoMode=not artifacts.is_loaded,
+        topGlobalFeatures=top_features if top_features else None,
     )

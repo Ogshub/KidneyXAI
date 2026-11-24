@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { TOKEN_KEY, clearStoredSession } from '../context/sessionStorage';
 
 let rawUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api';
 if (rawUrl.endsWith('/')) {
@@ -20,9 +21,10 @@ const apiClient = axios.create({
 // Request interceptor: attach JWT token if present
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('kidneycare_token');
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token && !config.url?.includes('/auth/')) {
       config.headers.Authorization = `Bearer ${token}`;
+      config.sessionToken = token;
     }
     return config;
   },
@@ -37,7 +39,7 @@ apiClient.interceptors.response.use(
 
     // Retry once on 503 (Render cold start) or network timeout
     if (
-      !config?._retried &&
+      config && ['get', 'head', 'options'].includes(config.method?.toLowerCase()) && !config._retried &&
       (error.response?.status === 503 || error.code === 'ECONNABORTED' || !error.response)
     ) {
       config._retried = true;
@@ -46,16 +48,10 @@ apiClient.interceptors.response.use(
       return apiClient(config);
     }
 
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('kidneycare_token');
-      localStorage.removeItem('kidneycare_user');
-      if (
-        window.location.pathname !== '/login' &&
-        window.location.pathname !== '/register' &&
-        window.location.pathname !== '/'
-      ) {
-        window.location.href = '/login';
-      }
+    if (error.response?.status === 401 && config?.sessionToken &&
+        config.sessionToken === localStorage.getItem(TOKEN_KEY)) {
+      clearStoredSession();
+      window.location.replace('/login?reason=session-expired');
     }
     return Promise.reject(error);
   }

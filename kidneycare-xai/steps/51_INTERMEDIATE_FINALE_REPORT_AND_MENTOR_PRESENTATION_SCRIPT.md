@@ -1,5 +1,7 @@
 # Step 51: Intermediate Finale Report, Literature Gap Synthesis, and Mentor Presentation Script
 
+> Research status update. The UCI benchmark is reproduced. External and human-study results remain unverified and are tracked in the research protocol.
+
 ---
 
 ## 1. Prerequisites
@@ -43,10 +45,10 @@ To prepare for high-stakes academic defenses, mentor reviews, and viva examinati
    - Gap 2: Opaque, untraceable lifestyle recommendations without evidence links.
    - Gap 3: Absence of human-centered evaluation and trust calibration (automation bias).
 5. **Section 5: What We Did to Fill the Gap**:
-   - Experiment 1 (ML Foundation): 10-fold CV on UCI (98.50% Acc, 0.9981 AUROC) and external testing on BD-KDD (92.41% Acc, 0.8872 AUROC).
+
    - Traceable Recommendation Engine (`trigger` $\rightarrow$ `rule_id` $\rightarrow$ `category` $\rightarrow$ `priority` $\rightarrow$ `source`).
    - Decoupled habit tracker (Lifestyle Progress Score strictly non-diagnostic).
-   - Experiment 2 (Human Evaluation, $N=64$, H1–H5): Factor identification ($87.5\%$ vs. $34.4\%$), subjective comprehension ($4.38$ vs. $2.81$), error detection / trust calibration ($68.8\%$ vs. $21.9\%$), and SUS ($79.4 \pm 6.8$).
+
 6. **Section 6: Algorithmic & Engineering Justifications**:
    - XGBoost vs. Deep Learning (overfitting on tabular data, regularized 2nd-order Taylor expansion).
    - TreeSHAP vs. LIME (stochastic sampling instability vs. axiomatic game-theoretic polynomial time $\mathcal{O}(TLD^2)$).

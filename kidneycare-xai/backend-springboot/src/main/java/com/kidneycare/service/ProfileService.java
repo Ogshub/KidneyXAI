@@ -22,6 +22,19 @@ public class ProfileService {
 
     private final UserRepository userRepository;
     private final HealthProfileRepository healthProfileRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Transactional
+    public void deleteAccount(String email, String password) {
+        User user = findUserByEmail(email);
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Password confirmation failed");
+        }
+        // Foreign keys cascade through account records and private PostgreSQL attachments.
+        userRepository.delete(user);
+        userRepository.flush();
+    }
 
     public ProfileResponse getProfile(String email) {
         User user = findUserByEmail(email);

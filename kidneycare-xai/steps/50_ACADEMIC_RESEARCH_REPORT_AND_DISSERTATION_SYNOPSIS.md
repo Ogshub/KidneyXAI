@@ -1,5 +1,7 @@
 # Step 50: Human-Centered Academic Research Dissertation Synopsis, Traceable Recommendations, and Trust Calibration
 
+> Research status update. The UCI benchmark is reproduced. External and human-study results remain unverified and are tracked in the research protocol.
+
 ---
 
 ## 1. Prerequisites
@@ -42,18 +44,18 @@ This step formally pivots and locks the project's **academic research identity**
    - Decoupled 4-tier architecture (Prediction, Explanation, Traceable Rules, Human Evaluation).
    - Traceable Recommendation Engine formalization (`DIET_SODIUM_01`, `HYDRATION_01`, `ACTIVITY_01`).
    - Human-subject experimental design: Condition A (Prediction-Only) vs. Condition B (Explainable + Traceable) across 3 standardized clinical vignettes (Correct, Erroneous, Uncertain).
-   - Formal hypotheses (H1–H5).
+
 5. **Chapter 4 – Implementation**:
    - Leak-free Scikit-Learn `Pipeline` and `ColumnTransformer` with fold-isolated imputation/scaling.
    - Microservice choreography (FastAPI + Spring Boot 3 + React 18).
 6. **Chapter 5 – Results and Discussions**:
-   - **Experiment 1 (ML Foundation)**: UCI 10-fold CV (98.50% Acc, 0.9981 AUROC) and BD-KDD cross-cohort generalization (92.41% Acc, 0.8872 AUROC).
-   - **Experiment 2 (Human Evaluation, $N=64$)**:
-     - Factor identification: $87.5\%$ (Condition B) vs. $34.4\%$ (Condition A), $p < 0.001$.
-     - Subjective understanding: $4.38/5$ vs. $2.81/5$, $p < 0.001$.
-     - Recommendation actionability: $4.44/5$ vs. $3.12/5$, $p < 0.001$.
-     - Trust calibration on erroneous case: $68.8\%$ (Condition B detected flaw) vs. $21.9\%$ (Condition A blindly accepted), $p < 0.001$.
-     - System Usability Scale (SUS): $79.4 \pm 6.8$ (Grade A).
+
+
+
+
+
+
+
 7. **Chapter 6 – Conclusion and Recommendations**:
    - Clear translational summary: explainability as an error-detection layer, recommendation traceability, ethical decoupling.
 8. **Audited & Verified References**:

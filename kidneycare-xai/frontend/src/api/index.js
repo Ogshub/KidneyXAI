@@ -12,6 +12,9 @@ export const authApi = {
 };
 
 export const profileApi = {
+  deleteAccount: async (password, confirmation) => {
+    await apiClient.delete('/profile', { data: { password, confirmation }, _retried: true });
+  },
   getProfile: async () => {
     const res = await apiClient.get('/profile');
     return res.data;
@@ -39,15 +42,15 @@ export const profileApi = {
 
 export const assessmentApi = {
   createAssessment: async (data) => {
-    const res = await apiClient.post('/assessments', data);
+    const res = await apiClient.post('/assessments', data, { _retried: true });
     return res.data;
   },
   getAssessments: async () => {
     const res = await apiClient.get('/assessments');
     return res.data;
   },
-  getAssessmentById: async (id) => {
-    const res = await apiClient.get(`/assessments/${id}`);
+  getAssessmentById: async (id, signal) => {
+    const res = await apiClient.get(`/assessments/${id}`, { signal, _retried: true });
     return res.data;
   },
   getModelEvaluation: async () => {
@@ -66,6 +69,12 @@ export const activityApi = {
     if (from) params.from = from;
     if (to) params.to = to;
     const res = await apiClient.get('/activities', { params });
+    return res.data;
+  },
+  getActivitySummary: async (period = 'weekly', date) => {
+    const params = { period };
+    if (date) params.date = date;
+    const res = await apiClient.get('/activities/summary', { params });
     return res.data;
   },
 };

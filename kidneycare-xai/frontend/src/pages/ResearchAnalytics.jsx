@@ -1,26 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { researchApi, assessmentApi } from '../api';
 import { useTheme } from '../context/ThemeContext';
-import { 
-  BarChart3, 
-  Sparkles, 
-  CheckCircle2, 
-  Users, 
-  ShieldCheck, 
-  TrendingUp, 
-  RefreshCw, 
-  FileText, 
-  Activity, 
+import {
+  BarChart3,
+  CheckCircle2,
+  RefreshCw,
+  Activity,
   HelpCircle,
   Award,
   Database,
-  Layers,
-  HeartPulse,
   ExternalLink,
-  BookOpen
 } from 'lucide-react';
 import { Card, Button, Badge, Spinner, Alert } from '../components/common';
 import { ShapBarChart } from '../components/charts';
+
+const calibrationFiles = import.meta.glob('../../../research/results/calibration_report.json', { eager: true, import: 'default' });
+const calibration = Object.values(calibrationFiles)[0];
 
 export const ResearchAnalytics = () => {
   const { isBrutalist } = useTheme();
@@ -33,12 +28,15 @@ export const ResearchAnalytics = () => {
     try {
       setLoading(true);
       setError('');
-      const [analyticsData, evalData] = await Promise.all([
+      const [analyticsData, evalData] = await Promise.allSettled([
         researchApi.getAnalytics(),
         assessmentApi.getModelEvaluation(),
       ]);
-      setAnalytics(analyticsData);
-      setModelEval(evalData);
+      setAnalytics(analyticsData.status === 'fulfilled' ? analyticsData.value : null);
+      setModelEval(evalData.status === 'fulfilled' ? evalData.value : null);
+      if (analyticsData.status === 'rejected' || evalData.status === 'rejected') {
+        setError('Some research results could not be loaded.');
+      }
     } catch (err) {
       console.error('Failed to load evaluation analytics:', err);
       setError('Could not retrieve research analytics from server.');
@@ -56,46 +54,51 @@ export const ResearchAnalytics = () => {
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
         <p className={`text-sm font-medium ${isBrutalist ? 'text-[var(--text-muted)] uppercase tracking-wider font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
-          Synthesizing multi-cohort clinical evaluation and TreeSHAP telemetry...
+          Loading UCI benchmark evaluation and TreeSHAP results…
         </p>
       </div>
     );
   }
 
-  // Multi-cohort dataset definitions from mlservice/data
-  const multiCohortDatasets = [
+  const percent = (value) => value == null ? '—' : `${(value * 100).toFixed(2)}%`;
+  const decimal = (value) => value == null ? '—' : Number(value).toFixed(4);
+
+  // Structured clinical dataset documentation
+  const researchCohorts = [
     {
       id: '01_uci',
-      title: '01. UCI CKD Benchmark (2015)',
-      badge: 'Primary Diagnostic Engine',
+      title: '01. UCI / Apollo Hospitals Benchmark',
+      badge: 'Research classifier',
       badgeColor: 'teal',
       records: 400,
       features: 24,
-      accuracy: '98.50%',
-      auroc: '0.9981',
-      f1Score: '0.9881',
+      accuracy: percent(modelEval?.accuracy),
+      auroc: decimal(modelEval?.auroc),
+      f1Score: decimal(modelEval?.f1Score),
       source: 'UCI Machine Learning Repository',
       sourceUrl: 'https://archive.ics.uci.edu/dataset/336/chronic+kidney+disease',
-      scope: 'Laboratory blood chemistry, urinalysis parameters, and cardiovascular vitals.',
+      scope: 'Laboratory blood chemistry, urinalysis parameters, and cardiovascular vitals (10-fold Stratified CV).',
+      status: modelEval?.status === 'available' ? 'Verified artifact' : 'Metrics unavailable',
     },
     {
       id: '02_kaggle',
       title: '02. Kaggle Lifestyle & Clinical Cohort',
-      badge: 'At-Home Screener Engine',
+      badge: 'Separate candidate cohort',
       badgeColor: 'blue',
       records: 1659,
       features: 54,
-      accuracy: '93.07%',
-      auroc: '0.8117',
-      f1Score: '0.9240',
+      accuracy: '—',
+      auroc: '—',
+      f1Score: '—',
       source: 'Kaggle Multi-Factor Cohort (2024)',
       sourceUrl: 'https://www.kaggle.com/',
-      scope: 'Lifestyle habits (diet, sodium, hydration, exercise) integrated with clinical signs.',
+      scope: 'Lifestyle habits (diet, sodium, hydration, exercise) integrated with clinical screener indicators.',
+      status: 'Separate Baseline',
     },
     {
       id: '03_pmc',
       title: '03. PubMed Central BD-KDD Hospital Cohort',
-      badge: 'Inpatient Clinical Baseline',
+      badge: 'Hospital Inpatient Baseline',
       badgeColor: 'purple',
       records: 988,
       features: 13,
@@ -104,14 +107,22 @@ export const ResearchAnalytics = () => {
       f1Score: 'Hospital Panel',
       source: 'PubMed Central (PMC13092092)',
       sourceUrl: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC13092092/',
-      scope: 'Institutional ethical permission verified hospital patient cohort with blood urea & creatinine.',
+      scope: 'Hospital cohort with blood urea and creatinine. External validation results are unavailable.',
+      status: 'Observational Baseline',
     },
   ];
 
-  const totalCohortPatients = multiCohortDatasets.reduce((acc, curr) => acc + curr.records, 0);
+  const activeModelRecords = modelEval?.datasetRecordCount ?? 400;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
+      <Card className="space-y-2">
+        <h2 className="text-xl font-bold">Phase 5 research studies</h2>
+        <p>The frozen synthetic benchmark contains 150 cases across six categories. Live M1–M4 comparisons, per-category findings and PCER ablation outcomes are pending.</p>
+        <p>Native retrieval verification, authorized provider access and qualified review are prerequisites for live evaluation.</p>
+        {calibration?.methods ? <><p>UCI CKD calibration used a {calibration.development_n}-record development split and a {calibration.evaluation_n}-record holdout. Split seed {calibration.seed}.</p><ul className="list-disc pl-5">{Object.entries(calibration.methods).map(([name, result]) => <li key={name}>{name} · Brier {result.metrics.brier.toFixed(4)} · log loss {result.metrics.log_loss.toFixed(4)} · ECE {result.metrics.positive_class_ece.toFixed(4)}</li>)}</ul><p>The cohort previously informed development. These are internal estimates.</p></>
+          : <p>Calibration results are unavailable.</p>}
+      </Card>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -119,17 +130,17 @@ export const ResearchAnalytics = () => {
             isBrutalist ? 'text-[var(--brutalist-yellow)] font-black' : 'text-teal-600 dark:text-teal-400'
           }`}>
             <Award className="w-4 h-4" />
-            Empirical Evaluation & Multi-Cohort Clinical Governance
+            Empirical Evaluation & Research Protocol Governance
           </div>
           <h1 className={`text-3xl font-extrabold tracking-tight ${
             isBrutalist ? 'text-[var(--text-main)] uppercase' : 'text-slate-900 dark:text-slate-100'
           }`}>
-            Research Evaluation & Multi-Dataset Analytics
+            Research Evaluation & Model Analytics
           </h1>
           <p className={`text-sm mt-1 ${
             isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-300'
           }`}>
-            Comprehensive empirical validation across all 3 ingested clinical datasets ({totalCohortPatients.toLocaleString()} patient records), 10-fold cross-validation metrics, and TreeSHAP explainability synthesis.
+            Artifact-backed empirical evaluation on the primary clinical benchmark ({activeModelRecords} cases), 10-fold stratified cross-validation telemetry, and TreeSHAP explainability verification.
           </p>
         </div>
         <Button onClick={fetchData} variant="outline" size="sm" icon={RefreshCw}>
@@ -139,26 +150,33 @@ export const ResearchAnalytics = () => {
 
       {error && <Alert type="danger">{error}</Alert>}
 
-      {/* Top 4 Multi-Cohort Metric Cards */}
+      {modelEval?.status === 'metrics_unavailable' && (
+        <Alert type="warning">
+          <strong>Evaluation Metrics Notice: </strong>
+          The machine learning service reported that evaluation metrics are currently unavailable or unverified for the active model artifact.
+        </Alert>
+      )}
+
+      {/* Top 4 Research Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className={isBrutalist ? 'border-l-[6px] border-l-[var(--brutalist-yellow)]' : 'border-l-4 border-l-teal-500'}>
           <span className={`text-xs font-semibold uppercase tracking-wider block mb-1 ${
             isBrutalist ? 'text-[var(--text-muted)] font-black' : 'text-slate-600 dark:text-slate-400'
           }`}>
-            Multi-Cohort Total (N)
+            Primary Cohort (N)
           </span>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-extrabold ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}`}>
-              {totalCohortPatients.toLocaleString()}
+              {activeModelRecords}
             </span>
             <span className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-              patients
+              records
             </span>
           </div>
           <p className={`text-[11px] mt-2 font-semibold ${
             isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-teal-600 dark:text-teal-400'
           }`}>
-            Across 3 Ingested Cohorts
+            Apollo / UCI Benchmark
           </p>
         </Card>
 
@@ -166,18 +184,18 @@ export const ResearchAnalytics = () => {
           <span className={`text-xs font-semibold uppercase tracking-wider block mb-1 ${
             isBrutalist ? 'text-[var(--text-muted)] font-black' : 'text-slate-600 dark:text-slate-400'
           }`}>
-            Diagnostic AUROC (H1)
+            Diagnostic AUROC
           </span>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-extrabold ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}`}>
-              {modelEval?.auroc ? Number(modelEval.auroc).toFixed(4) : '0.9981'}
+              {modelEval?.metrics?.auroc ? Number(modelEval.metrics.auroc).toFixed(4) : (modelEval?.auroc ? Number(modelEval.auroc).toFixed(4) : '—')}
             </span>
             <span className={`text-xs font-bold ${isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              10-Fold CV
+              {modelEval?.cvFolds ? `${modelEval.cvFolds}-Fold CV` : '—'}
             </span>
           </div>
           <p className={`text-[11px] mt-2 ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-            Accuracy: {(Number(modelEval?.accuracy || 0.985) * 100).toFixed(2)}% (UCI Benchmark)
+            Accuracy: {modelEval?.metrics?.accuracy ? `${(modelEval.metrics.accuracy * 100).toFixed(2)}%` : (modelEval?.accuracy ? `${(Number(modelEval.accuracy) * 100).toFixed(2)}%` : '—')}
           </p>
         </Card>
 
@@ -185,20 +203,20 @@ export const ResearchAnalytics = () => {
           <span className={`text-xs font-semibold uppercase tracking-wider block mb-1 ${
             isBrutalist ? 'text-[var(--text-muted)] font-black' : 'text-slate-600 dark:text-slate-400'
           }`}>
-            Lifestyle Cohort CV
+            Sensitivity / Recall
           </span>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-extrabold ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}`}>
-              93.07%
+              {percent(modelEval?.recall)}
             </span>
             <span className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-              accuracy
+              recall
             </span>
           </div>
           <p className={`text-[11px] mt-2 font-semibold ${
             isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-purple-600 dark:text-purple-400'
           }`}>
-            1,659 Kaggle Cases (AUROC: 0.812)
+            F1-Score: {decimal(modelEval?.f1Score)}
           </p>
         </Card>
 
@@ -206,39 +224,36 @@ export const ResearchAnalytics = () => {
           <span className={`text-xs font-semibold uppercase tracking-wider block mb-1 ${
             isBrutalist ? 'text-[var(--text-muted)] font-black' : 'text-slate-600 dark:text-slate-400'
           }`}>
-            Hospital Inpatients
+            Artifact Verification
           </span>
           <div className="flex items-baseline gap-2">
-            <span className={`text-3xl font-extrabold ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}`}>
-              988
-            </span>
-            <span className={`text-xs ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-500 dark:text-slate-400'}`}>
-              records
+            <span className={`text-xl font-mono font-extrabold truncate ${isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}`} title={modelEval?.artifactHash || 'Unavailable'}>
+              {modelEval?.artifactHash ? `${modelEval.artifactHash.substring(0, 10)}...` : 'Unavailable'}
             </span>
           </div>
           <p className={`text-[11px] mt-2 font-semibold ${
             isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-emerald-600 dark:text-emerald-400'
           }`}>
-            PMC13092092 Clinical Study
+            Model: {modelEval?.modelVersion || 'v1.0.0-xgb'}
           </p>
         </Card>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          MULTI-COHORT DATASET BENCHMARK MATRIX
+          RESEARCH DATASET INVENTORY & INTEGRITY MATRIX
           ───────────────────────────────────────────────────────────── */}
       <Card
-        title="Multi-Cohort Dataset Inventory & Cross-Validation Matrix"
-        subtitle="Empirical performance across all clinical data repositories in mlservice/data"
+        title="Research Cohort Inventory & Methodology Matrix"
+        subtitle="Independent clinical cohorts documented in the research protocol"
         icon={Database}
       >
         <div className="space-y-4">
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            KidneyCare-XAI evaluates models across multiple independent patient cohorts representing diverse geographies, data collection protocols, and feature dimensionalities:
+            KidneyCare-XAI maintains strict dataset integrity. Each cohort addresses a distinct clinical research objective and is evaluated separately without unvalidated cross-cohort pooling:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            {multiCohortDatasets.map((ds) => (
+            {researchCohorts.map((ds) => (
               <div
                 key={ds.id}
                 className={`p-4 transition-all flex flex-col justify-between ${
@@ -267,12 +282,12 @@ export const ResearchAnalytics = () => {
                     <span className="font-bold text-slate-700 dark:text-slate-200">{ds.features} parameters</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Model Accuracy:</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{ds.accuracy}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Status:</span>
+                    <span className="font-bold text-teal-600 dark:text-teal-400">{ds.status}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">AUROC:</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{ds.auroc}</span>
+                    <span className="text-slate-500 dark:text-slate-400">CV Accuracy:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">{ds.accuracy}</span>
                   </div>
                   <div className="pt-2">
                     <a
@@ -292,10 +307,10 @@ export const ResearchAnalytics = () => {
 
           <div className="mt-4 p-3 bg-teal-500/10 border border-teal-500/20 rounded-xl text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between flex-wrap gap-2">
             <span className="font-medium">
-              Weighted Multi-Cohort Accuracy across {totalCohortPatients.toLocaleString()} patients: <strong className="text-teal-700 dark:text-teal-300 font-bold">95.78%</strong>
+              Primary Model Validation: <strong className="text-teal-700 dark:text-teal-300 font-bold">{modelEval?.validationProtocol || '10-Fold Stratified Cross-Validation (Leakage-Free)'}</strong>
             </span>
             <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-              Evaluator: 10-Fold Stratified CV + TreeSHAP
+              Evaluator: XGBoost + TreeSHAP (Strict Log-Odds Margin Additivity)
             </span>
           </div>
         </div>
@@ -317,8 +332,8 @@ export const ResearchAnalytics = () => {
 
       {/* Formal Research Hypotheses Testing Status */}
       <Card
-        title="Formal Research Hypotheses Evaluation Matrix (IEEE Publication Findings)"
-        subtitle="Empirical validation status derived from multi-cohort ML benchmarks and human-subject evaluations"
+        title="Formal Research Hypotheses Evaluation Matrix"
+        subtitle="Empirical validation status derived from verified ML benchmarks and research evaluation protocol"
         icon={Award}
       >
         <div className="space-y-4 text-xs sm:text-sm">
@@ -334,12 +349,12 @@ export const ResearchAnalytics = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>
-                  Hypothesis H1 (Multi-Cohort Predictive & Latency Fidelity):
+                  Hypothesis H1 (Primary Diagnostic AUROC & Calibration Fidelity):
                 </span>
-                <Badge variant="low" size="sm">VALIDATED</Badge>
+                <Badge variant="low" size="sm">EMPIRICALLY VERIFIED</Badge>
               </div>
               <p className={`leading-relaxed ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-300'}`}>
-                The gradient boosted ensemble pipeline achieves <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>AUROC = {modelEval?.auroc ?? 0.9981}</strong> and <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>Accuracy = {(Number(modelEval?.accuracy || 0.985) * 100).toFixed(2)}%</strong> on primary clinical diagnosis, with <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>93.07%</strong> accuracy on the 1,659 Kaggle multi-factor cohort with an interactive inference latency of <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>{modelEval?.inferenceLatencyMs ?? 12.4} ms</strong>.
+                The leakage-free gradient boosted ensemble achieves <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>AUROC = {decimal(modelEval?.auroc)}</strong> and <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>Accuracy = {percent(modelEval?.accuracy)}</strong> on the Apollo/UCI primary diagnostic benchmark under 10-fold stratified cross-validation, as reported by the verified evaluation artifact.
               </p>
             </div>
           </div>
@@ -348,20 +363,20 @@ export const ResearchAnalytics = () => {
           <div className={`p-4 flex items-start gap-3 ${
             isBrutalist
               ? 'border-[2px] border-[var(--border-subtle)] bg-[var(--bg-surface)]'
-              : 'rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/60 dark:bg-emerald-950/25'
+              : 'rounded-xl border border-teal-200/80 dark:border-teal-800/60 bg-teal-50/60 dark:bg-teal-950/25'
           }`}>
             <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${
-              isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-emerald-600 dark:text-emerald-400'
+              isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-teal-600 dark:text-teal-400'
             }`} />
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>
-                  Hypothesis H2 (TreeSHAP Bimodal Explanation & Comprehension):
+                  Hypothesis H2 (TreeSHAP Bimodal Explanation & Log-Odds Additivity):
                 </span>
-                <Badge variant="low" size="sm">CONFIRMED (Mean: {analytics?.meanShapComprehension ?? 4.5}/5.0)</Badge>
+                <Badge variant="teal" size="sm">ACTIVE PROTOCOL</Badge>
               </div>
               <p className={`leading-relaxed ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-300'}`}>
-                Participants presented with bimodal explanations (visual TreeSHAP waterfall charts paired with natural language clinical narrative synthesis) demonstrated high objective understanding of primary risk drivers (mean rating: <strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>{analytics?.meanShapComprehension ?? 4.5}/5.0</strong>), confirming findings from oncology XAI clinical trials.
+                TreeSHAP additivity is verified across transformed feature spaces in model margin (log-odds) coordinates. Paired visual waterfall representations and natural language synthesis are provided to ensure transparent patient decision support.
               </p>
             </div>
           </div>
@@ -370,20 +385,20 @@ export const ResearchAnalytics = () => {
           <div className={`p-4 flex items-start gap-3 ${
             isBrutalist
               ? 'border-[2px] border-[var(--border-subtle)] bg-[var(--bg-surface)]'
-              : 'rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-emerald-50/60 dark:bg-emerald-950/25'
+              : 'rounded-xl border border-blue-200/80 dark:border-blue-800/60 bg-blue-50/60 dark:bg-blue-950/25'
           }`}>
             <CheckCircle2 className={`w-5 h-5 shrink-0 mt-0.5 ${
-              isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-emerald-600 dark:text-emerald-400'
+              isBrutalist ? 'text-[var(--brutalist-yellow)]' : 'text-blue-600 dark:text-blue-400'
             }`} />
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`font-bold ${isBrutalist ? 'text-[var(--text-main)] uppercase tracking-wider' : 'text-slate-900 dark:text-slate-100'}`}>
-                  Hypothesis H3 (Guideline Provenance & Actionability):
+                  Hypothesis H3 (Guideline Provenance & Recommendation Traceability):
                 </span>
-                <Badge variant="low" size="sm">CONFIRMED (Mean: {analytics?.meanGuidelineTrust ?? 4.8}/5.0)</Badge>
+                <Badge variant="blue" size="sm">ACTIVE PROTOCOL</Badge>
               </div>
               <p className={`leading-relaxed ${isBrutalist ? 'text-[var(--text-muted)]' : 'text-slate-600 dark:text-slate-300'}`}>
-                Explicit provenance linkages (triggering biomarker &rarr; priority &rarr; KDIGO 2024 / WHO citation) significantly increased user trust calibration (<strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>{analytics?.meanGuidelineTrust ?? 4.8}/5.0</strong>) and reported willingness to adhere to lifestyle modifications (<strong className={isBrutalist ? 'text-[var(--text-main)]' : 'text-slate-900 dark:text-white'}>{analytics?.meanActionability ?? 4.7}/5.0</strong>).
+                Explicit provenance linkages (triggering biomarker/lifestyle pattern &rarr; stable rule ID &rarr; KDIGO 2024 / WHO citation) ground lifestyle suggestions with explicit contraindications and triage rules.
               </p>
             </div>
           </div>

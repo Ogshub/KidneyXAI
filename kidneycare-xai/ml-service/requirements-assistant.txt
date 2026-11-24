@@ -1,0 +1,3 @@
+# Optional dependencies for the local pgvector retriever and ingestion.
+psycopg[binary]>=3.2,<4
+sentence-transformers>=3.2,<6

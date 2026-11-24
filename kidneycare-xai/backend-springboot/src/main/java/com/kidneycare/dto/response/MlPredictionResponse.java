@@ -21,6 +21,8 @@ public class MlPredictionResponse {
     private String prediction;
     private List<MlFeatureExplanation> explanations;
     private String modelVersion;
+    private Boolean isDemoMode;
+    private String explanationStatus;
 
     @Data
     @Builder

@@ -1,0 +1,62 @@
+{
+  "dataset": "UCI CKD",
+  "dataset_sha256": "35b9acfe7a600abc32b0cba139351c5a34d203cf8f0dbc20c275a8cd9e53a594",
+  "development_n": 320,
+  "evaluation_n": 80,
+  "seed": 42,
+  "pipeline": "fresh XGBoost; fold-local preprocessing; five-fold development-only calibration",
+  "limitations": "Previously used dataset. Internal split. Brier intervals are conditional on fitted models.",
+  "methods": {
+    "uncalibrated": {
+      "metrics": {
+        "accuracy": 0.9875,
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "specificity": 0.9666666666666667,
+        "f1": 0.9900990099009901,
+        "auroc": 1.0,
+        "brier": 0.01151958666741848,
+        "log_loss": 0.04937376454472542,
+        "positive_class_ece": 0.02843596532475203
+      },
+      "brier_bootstrap_ci95": [
+        0.003802088770316914,
+        0.02215826124884188
+      ]
+    },
+    "sigmoid": {
+      "metrics": {
+        "accuracy": 0.9875,
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "specificity": 0.9666666666666667,
+        "f1": 0.9900990099009901,
+        "auroc": 1.0,
+        "brier": 0.007671843425292449,
+        "log_loss": 0.03829778774264721,
+        "positive_class_ece": 0.03264778906182404
+      },
+      "brier_bootstrap_ci95": [
+        0.0009153214917496438,
+        0.018143642422286475
+      ]
+    },
+    "isotonic": {
+      "metrics": {
+        "accuracy": 0.9875,
+        "precision": 0.9803921568627451,
+        "recall": 1.0,
+        "specificity": 0.9666666666666667,
+        "f1": 0.9900990099009901,
+        "auroc": 1.0,
+        "brier": 0.009115013565970331,
+        "log_loss": 0.032985323271980345,
+        "positive_class_ece": 0.01623232290148735
+      },
+      "brier_bootstrap_ci95": [
+        0.002859503311066769,
+        0.018068715836157233
+      ]
+    }
+  }
+}

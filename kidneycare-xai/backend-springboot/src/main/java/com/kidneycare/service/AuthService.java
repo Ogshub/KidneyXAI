@@ -40,7 +40,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         // Generate JWT
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(java.util.Map.of("uid", user.getId().toString()), user.getEmail());
 
         return AuthResponse.builder()
                 .token(token)
@@ -58,7 +58,7 @@ public class AuthService {
             throw new IllegalArgumentException("Invalid email or password");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(java.util.Map.of("uid", user.getId().toString()), user.getEmail());
 
         return AuthResponse.builder()
                 .token(token)

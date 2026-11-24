@@ -1,78 +1,104 @@
-version: '3.8'
-
 services:
-  # ── PostgreSQL Database ──────────────────────────────────
   db:
-    image: postgres:15-alpine
-    container_name: kidneycare-db
+    image: pgvector/pgvector:pg15
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_DB: kidneycare
+      POSTGRES_DB: ${DB_NAME:-kidneycare}
       POSTGRES_USER: ${DB_USERNAME:-kidneycare}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-kidneycare_secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Run scripts/setup-local.ps1 first}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docs/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-kidneycare}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  # ── Python ML Service ────────────────────────────────────
-  ml-service:
-    build:
-      context: ./ml-service
-      dockerfile: Dockerfile
-    container_name: kidneycare-ml
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
+  migrate:
+    image: pgvector/pgvector:pg15
     environment:
-      MODEL_PATH: /app/models
-      LOG_LEVEL: info
+      PGHOST: db
+      PGDATABASE: ${DB_NAME:-kidneycare}
+      PGUSER: ${DB_USERNAME:-kidneycare}
+      PGPASSWORD: ${DB_PASSWORD:?Run scripts/setup-local.ps1 first}
+      PGCONNECT_TIMEOUT: "5"
     volumes:
-      - ./ml-service/models:/app/models
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ── Spring Boot Backend ──────────────────────────────────
-  backend:
-    build:
-      context: ./backend-springboot
-      dockerfile: Dockerfile
-    container_name: kidneycare-backend
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/kidneycare
-      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-kidneycare}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-kidneycare_secret}
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-kidneycare-xai-2026}
-      ML_SERVICE_URL: http://ml-service:8000
+      - ./docs/database:/sql:ro
+      - ./scripts/migrate-local.sql:/migrate-local.sql:ro
+    working_dir: /sql
+    command: ["psql", "-X", "-v", "ON_ERROR_STOP=1", "-v", "enable_vector=true", "--single-transaction", "-f", "/migrate-local.sql"]
     depends_on:
       db:
         condition: service_healthy
+
+  ml-service:
+    build:
+      context: ./ml-service
+      args:
+        ASSISTANT_RETRIEVER: ${ASSISTANT_RETRIEVER:-fixture}
+    restart: unless-stopped
+    environment:
+      MODEL_PATH: /app/models
+      ML_INTERNAL_SECRET: ${ML_INTERNAL_SECRET:?Run scripts/setup-local.ps1 first}
+      ASSISTANT_PROVIDER: ${ASSISTANT_PROVIDER:-mock}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ASSISTANT_RETRIEVER: ${ASSISTANT_RETRIEVER:-fixture}
+      ASSISTANT_KB_DSN: ${ASSISTANT_KB_DSN:-}
+      ASSISTANT_EMBEDDING_MODEL: ${ASSISTANT_EMBEDDING_MODEL:-}
+      ASSISTANT_SYNTHETIC_RESEARCH: ${ASSISTANT_SYNTHETIC_RESEARCH:-}
+    volumes:
+      - ./ml-service/models:/app/models:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; assert json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3))['modelLoaded']"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build: ./backend-springboot
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-kidneycare}
+      DB_USERNAME: ${DB_USERNAME:-kidneycare}
+      DB_PASSWORD: ${DB_PASSWORD:?Run scripts/setup-local.ps1 first}
+      HIBERNATE_DDL_AUTO: none
+      JWT_SECRET: ${JWT_SECRET:?Run scripts/Initialize-LocalAuth.ps1 first}
+      ML_INTERNAL_SECRET: ${ML_INTERNAL_SECRET:?Run scripts/setup-local.ps1 first}
+      ML_SERVICE_URL: http://ml-service:8000
+      ASSISTANT_CONVERSATIONAL_RESEARCH: ${ASSISTANT_CONVERSATIONAL_RESEARCH:-}
+      ASSISTANT_SYNTHETIC_ACCOUNTS: ${ASSISTANT_SYNTHETIC_ACCOUNTS:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
       ml-service:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/assessments/model-evaluation | grep -q modelVersion"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
 
-  # ── React Frontend ───────────────────────────────────────
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: kidneycare-frontend
+    build: ./frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/api/assessments/model-evaluation"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
 
 volumes:
   postgres_data:

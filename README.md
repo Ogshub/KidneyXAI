@@ -376,6 +376,10 @@ KidneyXAI/
 
 ---
 
+## Medical Records and Laboratory History
+
+Authenticated users can manage private medical reports, enter source-attributed laboratory measurements, view trends, compare reports and review eligible assessment inputs. See the [Phase 3 completion report](kidneycare-xai/docs/PHASE_3_COMPLETION_REPORT.md) for local migrations and test commands.
+
 ## ⚡ Local Development Quickstart
 
 ### Prerequisites
@@ -402,7 +406,7 @@ python train_model.py
 
 # Expected output:
 # ✅ Training complete! All artifacts saved to models/
-# Accuracy: 98.50% | AUROC: 0.9920 | F1: 0.9840
+# Accuracy: 98.50% | AUROC: 0.9981 | F1: 0.9881
 ```
 
 ### Step 2: Start the ML Service

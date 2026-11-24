@@ -192,7 +192,7 @@ We implemented a robust, leak-free Scikit-Learn pipeline. In many published pape
   - F1-Score: **$0.9881$**
   - Sensitivity (Recall): **$0.9920$**
 * **External Robustness on BD-KDD ($n=988$)**:
-  - When evaluated on the independent Bangladesh cohort without retraining, accuracy shifted to **$92.41\%$** and AUROC to **$0.8872$**.
+  - External validation on BD-KDD remains a planned study.
   - **The Scientific Value**: Rather than hiding this shift, we discuss it openly. It provides empirical proof that tabular models trained on a single hospital encounter real-world distribution shifts when deployed in different geographic regions.
 
 ### 5.2 The Traceable Recommendation Engine (Our Structural Novelty)
@@ -220,25 +220,9 @@ We created a daily habit tracker that monitors hydration (mL), physical activity
 * It is explicitly labeled: *"This score tracks daily wellness habits. It is NOT a clinical kidney filtration measurement and cannot diagnose disease."*
 * This prevents users from confusing lifestyle habit tracking with clinical diagnostic tests.
 
-### 5.4 Experiment 2: The Controlled Human-Subject Evaluation ($N=64$)
-This is the true research centerpiece. We recruited 64 university participants and conducted a controlled between-subjects experiment:
-* **Condition A (Prediction-Only)**: Participants viewed standardized patient scenarios showing only the predicted risk label (e.g., "Elevated Risk: 84%") and generic advice text.
-* **Condition B (Explainable + Traceable)**: Participants viewed the identical scenarios alongside the interactive TreeSHAP waterfall visualizer and the traceable recommendation audit cards.
+### 5.4 Proposed human-subject evaluation
 
-#### The Three Standardized Vignettes:
-To test trust calibration objectively, participants evaluated three standardized cases:
-1. **Case 1 (Clear Pathological Profile — Model Correct)**: High creatinine ($2.8\text{ mg/dL}$), low hemoglobin ($9.4\text{ g/dL}$), heavy proteinuria. The model correctly predicted High Risk.
-2. **Case 2 (Atypical/Noisy Profile — Model Erroneous)**: Near-normal clinical values with a single anomalous artifact where the model falsely predicted High Risk.
-3. **Case 3 (Borderline Profile — Model Uncertain)**: Equivocal creatinine ($1.3\text{ mg/dL}$) with intermediate probability ($52\%$).
-
-#### The Experimental Findings (H1–H5):
-* **H1 (Factor Identification)**: Condition B participants correctly identified the laboratory features responsible for the prediction in **$87.5\%$** of trials, compared to only **$34.4\%$** in Condition A ($p < 0.001$).
-* **H2 (Subjective Comprehension)**: Self-rated understanding was significantly higher in Condition B ($4.38/5$ vs. $2.81/5$, $p < 0.001$).
-* **H3 (Recommendation Actionability)**: Traceable recommendations were rated significantly more actionable and relevant than generic text ($4.44/5$ vs. $3.12/5$, $p < 0.001$).
-* **H4 (Trust Calibration — The Key Discovery)**: In Case 2 (erroneous model prediction), **$78.1\%$ of Prediction-Only users blindly accepted the false prediction (automation bias)**. In contrast, **$68.8\%$ of Explainable & Traceable users spotted the discrepancy in the feature attributions and correctly questioned the flawed output** ($p < 0.001$).
-* **H5 (System Usability)**: The platform achieved a System Usability Scale (SUS) score of **$79.4 \pm 6.8$** (Grade A, 85th percentile).
-
----
+The study design compares prediction-only and explainable interfaces using standardized vignettes. Recruitment, verified results, and usability measures are pending.
 
 ## 6. Why Certain Algorithms & Engineering Stacks Were Chosen
 
@@ -273,10 +257,10 @@ When you sit down with your mentor tomorrow, follow this structured, confident n
 > *"Sir/Ma'am, Chronic Kidney Disease affects over 850 million people worldwide, but its early stages are virtually symptomless. By the time patients notice swelling or severe fatigue, up to 80% of kidney function is already lost. Machine learning has been widely proposed to predict risk from blood and urine tests, but as we examined the recent literature, we discovered a major problem: almost every published paper simply trains an algorithm on the 400-record Apollo Hospitals dataset, reports 98% accuracy, and stops. Furthermore, several 2024 to 2026 papers have already built web tools pairing XGBoost with SHAP on that exact dataset. We realized that claiming novelty on prediction accuracy alone was no longer scientifically defensible."*
 
 ### Step 2: Explaining Our True Gap and Research Question (2 Minutes)
-> *"We asked a fundamentally different question: Once an AI predicts elevated risk, does an explanation actually help a human understand the result and take action, or does it cause blind over-reliance? Recent health informatics meta-analyses warned that showing complex AI charts often causes 'automation bias'—users blindly trust the computer even when it makes a mistake. Therefore, we designed KidneyCare-XAI around three original contributions: First, we demoted the ML model to an operational foundation rather than our headline claim, evaluating it on the 400-record UCI benchmark and testing cross-cohort generalization on the 988-record Bangladesh BD-KDD cohort. Second, we built an auditable Traceable Recommendation Engine, where every piece of lifestyle advice is linked to an explicit Trigger, Rule ID, Priority, and clinical guideline source so the user can ask 'Why am I seeing this advice?'. Third, we conducted a controlled human-subject study with 64 participants to test whether explanations actually help users calibrate their reliance."*
+> We ask whether a traceable explanation helps users interpret and verify an estimated risk. The prototype connects the UCI model, TreeSHAP, educational rule provenance and longitudinal self-monitoring.
 
 ### Step 3: Presenting the Results & Findings (2 Minutes)
-> *"Our findings confirmed our hypothesis. Our predictive pipeline achieved 98.50% accuracy on 10-fold CV, and shifted to 92.41% on the independent Bangladesh cohort, demonstrating real-world distribution shift. But the human evaluation was the most significant breakthrough: In our controlled trial, users with our explainable and traceable interface identified the true laboratory drivers behind their risk with 87.5% accuracy compared to only 34.4% in the prediction-only group. More importantly, when we presented an erroneous model prediction, over 78% of users in the prediction-only group blindly accepted the false output, whereas nearly 69% of users with our explainable interface caught the error because the feature attributions contradicted the clinical scenario. Finally, the platform achieved an 'A' grade System Usability Scale score of 79.4."*
+> The UCI model achieved 98.50% accuracy, 0.9981 AUROC and 0.9881 F1 in stratified ten-fold cross-validation. External and human evaluations remain pending.
 
 ### Step 4: Closing & Live Demonstration (1 Minute)
 > *"In summary, our research does not merely build another classifier; it demonstrates how explainable AI and traceable recommendations can be engineered to foster calibrated human reliance and actionable lifestyle awareness. The complete full-stack application is live and deployed across Vercel, Render, and Supabase, and I would love to walk you through a live demonstration."*
@@ -294,10 +278,6 @@ When you sit down with your mentor tomorrow, follow this structured, confident n
 | **Explainability Engine** | TreeSHAP (`shap.TreeExplainer`, polynomial time $\mathcal{O}(TLD^2)$) |
 | **Top 3 Biomarkers** | Hemoglobin ($|\text{SHAP}| = 1.649$), Serum Creatinine ($1.069$), Specific Gravity ($0.933$) |
 | **10-Fold CV Metrics** | Accuracy: **98.50%**, AUROC: **0.9981**, F1-Score: **0.9881**, Sensitivity: **0.9920** |
-| **External Validation** | Accuracy: **92.41%**, AUROC: **0.8872** (Evaluated on BD-KDD) |
+| **External validation** | Planned on BD-KDD |
 | **Recommendation Engine** | Deterministic rule contract: `trigger` $\rightarrow$ `rule_id` $\rightarrow$ `category` $\rightarrow$ `priority` $\rightarrow$ `source` |
-| **Human Study Size** | $N = 64$ participants (Between-subjects: Condition A Prediction-Only vs. Condition B Explainable+Traceable) |
-| **Factor Identification** | $87.5\%$ (Condition B) vs. $34.4\%$ (Condition A), $p < 0.001$ |
-| **Error Detection Rate** | $68.8\%$ (Condition B detected flawed AI output) vs. $21.9\%$ (Condition A), $p < 0.001$ |
-| **System Usability Scale** | **$79.4 \pm 6.8$** (Grade A, 85th percentile benchmark) |
 | **Production Topology** | Frontend: Vercel CDN | Backend & ML: Render Cloud | Database: PostgreSQL on Supabase |

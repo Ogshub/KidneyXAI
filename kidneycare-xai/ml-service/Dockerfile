@@ -3,11 +3,14 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install dependencies
-COPY requirements.txt .
+COPY requirements.txt requirements-assistant.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+ARG ASSISTANT_RETRIEVER=fixture
+RUN if [ "$ASSISTANT_RETRIEVER" = "pgvector" ]; then pip install --no-cache-dir -r requirements-assistant.txt; fi
 
 # Copy application code
 COPY app/ ./app/
+COPY knowledge/ ./knowledge/
 
 # Create models directory (artifacts mounted at runtime)
 RUN mkdir -p /app/models
