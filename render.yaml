@@ -12,6 +12,16 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: ML_INTERNAL_SECRET
+        sync: false
+      - key: ASSISTANT_PROVIDER
+        value: mock
+      - key: ASSISTANT_MODEL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ASSISTANT_RETRIEVER
+        value: fixture
 
   # Spring Boot Backend REST API
   - type: web
