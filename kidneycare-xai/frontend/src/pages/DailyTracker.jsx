@@ -285,7 +285,7 @@ export const DailyTracker = () => {
             </Alert>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="tracker-two-col grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Daily entry form */}
             <div className="lg:col-span-2">
               <form onSubmit={handleSubmit} className="space-y-6">

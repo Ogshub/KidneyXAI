@@ -12,6 +12,16 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: ML_INTERNAL_SECRET
+        sync: false
+      - key: ASSISTANT_PROVIDER
+        value: mock
+      - key: ASSISTANT_MODEL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ASSISTANT_RETRIEVER
+        value: fixture
 
   # Spring Boot Backend REST API
   - type: web
@@ -23,17 +33,19 @@ services:
     autoDeploy: true
     envVars:
       - key: DB_URL
-        value: jdbc:postgresql://aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0
+        sync: false
       - key: DB_USERNAME
-        value: postgres.vavlhunhushdnaqdjyjy
+        sync: false
       - key: DB_PASSWORD
-        value: Kidneyprojectmca1
+        sync: false
       - key: JWT_SECRET
-        value: XGg7sWWYpmxIatIpSOtXNsI3fytG8O2UgYpxRRlLdR8=
+        sync: false
+      - key: ML_INTERNAL_SECRET
+        sync: false
       - key: SUPABASE_URL
-        value: https://vavlhunhushdnaqdjyjy.supabase.co
+        sync: false
       - key: SUPABASE_ANON_KEY
-        value: sb_publishable_7TnIoZFm1vzC59_x_BQexA_cFBGLm2v
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         value: mkvwiqlw
       - key: DB_POOL_SIZE
@@ -45,3 +57,7 @@ services:
           type: web
           name: kidneycare-ml-service
           property: host
+      - key: ASSISTANT_PROVIDER
+        value: mock
+      - key: ASSISTANT_RETRIEVER
+        value: fixture
