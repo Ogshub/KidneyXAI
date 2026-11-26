@@ -30,17 +30,20 @@ public class AssistantService {
     private final ObjectMapper json;
     private final ConversationService conversations;
     private final AssistantContextTools tools;
+    private final GroqService groqService;
     private final Set<String> syntheticAccounts;
 
     public AssistantService(@Value("${ml.service.url:http://localhost:8000}") String url,
             @Value("${ml.internal.secret:}") String secret, ObjectMapper json,
             ConversationService conversations, AssistantContextTools tools,
+            GroqService groqService,
             @Value("${assistant.conversational.research:disabled}") String research,
             @Value("${assistant.synthetic.accounts:}") String accounts) {
         this.secret = secret;
         this.json = json;
         this.conversations = conversations;
         this.tools = tools;
+        this.groqService = groqService;
         this.syntheticAccounts = "enabled".equals(research)
                 ? Arrays.stream(accounts.split(",")).map(String::strip).filter(account -> !account.isEmpty())
                     .collect(Collectors.toUnmodifiableSet())
@@ -53,9 +56,14 @@ public class AssistantService {
 
     public AssistantResponse chat(String email, UUID existing, String question, AssistantPageContext page) {
         long owner = conversations.owner(email);
-        var previous = existing == null ? List.<ConversationService.Turn>of() : conversations.history(owner, existing, 1);
         limit(owner);
         tools.validatePage(email, page);
+
+        if (groqService.isEnabled()) {
+            return groqService.chat(email, existing, question, page);
+        }
+
+        var previous = existing == null ? List.<ConversationService.Turn>of() : conversations.history(owner, existing, 1);
         boolean conversational = syntheticAccounts.contains(email);
         UUID conversation = existing == null ? UUID.randomUUID() : existing;
         UUID message = UUID.randomUUID();

@@ -364,3 +364,81 @@ html.dark[data-contrast="high"] {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE / RESPONSIVE GLOBAL FIXES
+   Applied on top of Tailwind and existing CSS.
+   ═══════════════════════════════════════════════════ */
+
+/* Prevent any element from blowing out horizontal scroll */
+html, body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%; /* prevent iOS font inflation */
+}
+
+/* Smooth overscroll rubber-band on mobile */
+html {
+  overscroll-behavior-y: contain;
+}
+
+/* Touch-friendly minimum tap target for all interactive elements */
+button, [role="button"], a, summary, select, input[type="checkbox"], input[type="radio"] {
+  min-height: 2.5rem;
+}
+
+/* Images and media should never overflow */
+img, video, canvas, svg, iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tables: horizontal scroll by default on mobile */
+/* Only apply to tables that don't have their own scroll wrapper */
+.medical-table {
+  min-width: 36rem;
+}
+
+/* Utility: hide on mobile */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
+/* Utility: show only on mobile */
+.show-mobile { display: none !important; }
+@media (max-width: 640px) {
+  .show-mobile { display: unset !important; }
+}
+
+/* Landing page: responsive padding reduction */
+@media (max-width: 640px) {
+  /* Hero section */
+  .landing-hero-section { padding-top: 1.5rem; padding-bottom: 2rem; }
+
+  /* CTA dark section — reduce padding from p-10 */
+  .landing-cta-section { padding: 1.5rem 1rem !important; }
+
+  /* Feature importance chart section */
+  .landing-chart-section { padding: 1.25rem !important; }
+}
+
+/* Recommendations filter tabs: smooth horizontal scroll on mobile */
+@media (max-width: 640px) {
+  .rec-filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+    scrollbar-width: none;
+  }
+  .rec-filter-row::-webkit-scrollbar { display: none; }
+}
+
+/* Assessment form: single column on very small screens */
+@media (max-width: 400px) {
+  /* Force single-column even on sm: breakpoint */
+  .assessment-grid-sm { grid-template-columns: 1fr !important; }
+}
+
+/* Daily tracker sidebar: stack below form on tablet */
+@media (max-width: 768px) {
+  .tracker-two-col { grid-template-columns: 1fr !important; }
+}

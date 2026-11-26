@@ -76,7 +76,7 @@ export const Recommendations = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+      <div className="rec-filter-row flex items-center gap-2 overflow-x-auto pb-2">
         <span className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1 mr-2">
           <Filter className="w-3.5 h-3.5" /> Category:
         </span>

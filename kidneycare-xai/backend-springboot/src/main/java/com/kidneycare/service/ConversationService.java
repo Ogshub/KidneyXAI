@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ConversationService {
-    public record Conversation(UUID id, OffsetDateTime updatedAt) {}
+    public record Conversation(UUID id, String title, OffsetDateTime updatedAt) {}
     public record Turn(String question, AssistantResponse response) {}
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -29,8 +29,18 @@ public class ConversationService {
 
     public List<Conversation> list(long user) {
         return jdbc.query("""
-            SELECT id, updated_at FROM ai_conversations WHERE user_id=? ORDER BY updated_at DESC LIMIT 50
-            """, (row, n) -> new Conversation(row.getObject(1, UUID.class), row.getObject(2, OffsetDateTime.class)), user);
+            SELECT c.id,
+                   COALESCE((SELECT m.question FROM ai_messages m WHERE m.conversation_id = c.id ORDER BY m.created_at ASC LIMIT 1), 'Conversation') AS title,
+                   c.updated_at
+            FROM ai_conversations c
+            WHERE c.user_id = ?
+            ORDER BY c.updated_at DESC
+            LIMIT 50
+            """, (row, n) -> new Conversation(
+                row.getObject(1, UUID.class),
+                row.getString(2),
+                row.getObject(3, OffsetDateTime.class)
+            ), user);
     }
 
     public List<Turn> history(long user, UUID id, int limit) {
