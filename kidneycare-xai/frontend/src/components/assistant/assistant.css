@@ -412,11 +412,45 @@
   word-break: break-word;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.brutalist .chat-ai-bubble {
+.brutalist .chat-ai-bubble,
+.brutalist.dark .chat-ai-bubble {
   border-radius: 0;
   border: 2px solid #000;
   box-shadow: 3px 3px 0 #000;
-  background: #fff;
+  background: #fff !important;
+  color: #000 !important;
+}
+.brutalist .chat-ai-bubble *,
+.brutalist.dark .chat-ai-bubble * {
+  color: #000 !important;
+}
+.brutalist .chat-ai-bubble strong,
+.brutalist.dark .chat-ai-bubble strong {
+  color: #000 !important;
+  font-weight: 800 !important;
+}
+.brutalist .chat-ai-bubble .chat-action-link,
+.brutalist.dark .chat-ai-bubble .chat-action-link {
+  background: #fef08a !important;
+  color: #000 !important;
+  border: 1.5px solid #000 !important;
+}
+.brutalist .chat-ai-bubble .assistant-chip,
+.brutalist.dark .chat-ai-bubble .assistant-chip {
+  background: #fef08a !important;
+  color: #000 !important;
+  border: 2px solid #000 !important;
+}
+.brutalist .chat-ai-bubble .assistant-chip *,
+.brutalist.dark .chat-ai-bubble .assistant-chip * {
+  color: #000 !important;
+}
+
+/* Clinical (non-brutalist) dark mode */
+.dark:not(.brutalist) .chat-ai-bubble {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
 }
 
 /* Urgent alert inside bubble */
@@ -658,16 +692,14 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.dark .assistant-history-item-title {
+.dark:not(.brutalist) .assistant-history-item-title {
   color: #f1f5f9 !important;
 }
-.brutalist .assistant-history-item-title {
+.brutalist .assistant-history-item-title,
+.brutalist.dark .assistant-history-item-title {
   color: #000 !important;
   font-weight: 800 !important;
   text-transform: uppercase !important;
-}
-.brutalist.dark .assistant-history-item-title {
-  color: #f5f0e8 !important;
 }
 .assistant-history-item-time {
   display: block;
@@ -678,15 +710,13 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.dark .assistant-history-item-time {
+.dark:not(.brutalist) .assistant-history-item-time {
   color: #94a3b8 !important;
 }
-.brutalist .assistant-history-item-time {
+.brutalist .assistant-history-item-time,
+.brutalist.dark .assistant-history-item-time {
   color: #475569 !important;
   font-weight: 700 !important;
-}
-.brutalist.dark .assistant-history-item-time {
-  color: #a8a29e !important;
 }
 
 /* Delete button per history row */
@@ -706,25 +736,27 @@
 }
 .assistant-history-delete:hover { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 .assistant-history-delete:disabled { opacity: 0.4; cursor: not-allowed; }
-.dark .assistant-history-delete {
+.dark:not(.brutalist) .assistant-history-delete {
   background: #1e293b;
   border-color: #334155;
   color: #94a3b8;
 }
-.dark .assistant-history-delete:hover {
+.dark:not(.brutalist) .assistant-history-delete:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
   border-color: #ef4444;
 }
-.brutalist .assistant-history-delete {
+.brutalist .assistant-history-delete,
+.brutalist.dark .assistant-history-delete {
   border-radius: 0;
   border: 2px solid #000;
   background: #fff;
-  color: #000;
+  color: #000 !important;
 }
-.brutalist .assistant-history-delete:hover {
-  background: #e63326;
-  color: #fff;
+.brutalist .assistant-history-delete:hover,
+.brutalist.dark .assistant-history-delete:hover {
+  background: #e63326 !important;
+  color: #fff !important;
 }
 
 /* ── Footer / input area ─────────────────────── */
